@@ -1,211 +1,211 @@
-# PDF Toolkit
+# PDF Toolkit — by tommytang
 
-**URL**: https://pdf-toolkit-hazel.vercel.app
+**Live**: https://pdf-toolkit-hazel.vercel.app
+**Source**: https://github.com/tommytang2414/pdf-toolkit
 
-A browser-based PDF manipulation tool. All processing happens entirely in your browser — files are never uploaded to any server.
+A browser-based PDF tool. No upload. No tracking. No sign-up. Everything runs locally in your browser.
 
 ---
 
-## Overview
+## Features
 
-PDF Toolkit provides three focused tools for working with PDF documents. The application requires no sign-up, no account, and no data leaves your device.
-
-| Tool | Route | Description |
+| Tool | Route | What it does |
 |------|-------|-------------|
-| **Merge PDFs** | `/merge` | Combine multiple PDFs into a single file, with full control over merge order |
-| **Split PDF** | `/split` | Extract specific pages or page ranges into a new PDF document |
-| **Full Toolkit** | `/toolkit` | Merge multiple files, then reorder, rotate, and delete pages — all in one session |
+| **Merge PDFs** | `/merge` | Drop multiple PDFs, reorder, combine into one |
+| **Split PDF** | `/split` | Click pages or type a range like `1-3, 5, 7-9` to extract |
+| **Full Toolkit** | `/toolkit` | Merge + reorder + rotate + delete — all in one session |
+
+All operations are 100% client-side. Files never leave your browser.
 
 ---
 
-## User Requirements
-
-### Supported Operations
-
-| Operation | Description | Supported On |
-|-----------|-------------|-------------|
-| **Merge** | Combine 2 or more PDF files into a single document | `/merge`, `/toolkit` |
-| **Split by selection** | Click individual pages to select and extract them | `/split` |
-| **Split by range** | Extract a specific range, e.g. `1-3, 5, 7-9` | `/split` |
-| **Reorder pages** | Drag pages into a new sequence | `/toolkit` |
-| **Rotate pages** | Rotate individual pages by 90° clockwise | `/toolkit` |
-| **Delete pages** | Remove pages from the document | `/toolkit` |
-
-### File Requirements
-
-- **Format**: `.pdf` files only
-- **Size**: No explicit limit; browser memory is the practical constraint
-- **Number of files**: Any number for merge and toolkit operations
-- **Input method**: Drag and drop onto the dropzone, or click to open the file picker
-- **Output**: Downloadable `.pdf` file, processed entirely in-browser
-
-### Browser Compatibility
-
-PDF Toolkit is compatible with all modern browsers that support:
-- WebAssembly (required by `pdfjs-dist`)
-- `Uint8Array` and `Blob` APIs
-- HTML5 Drag and Drop API
-
-Tested in Chrome, Edge, Firefox, and Safari (latest versions).
-
----
-
-## Function Specification
-
-### Architecture
-
-```
-pdf-toolkit/
-├── app/
-│   ├── layout.tsx              # Root layout (fonts, metadata)
-│   ├── page.tsx                 # Home: three feature cards
-│   ├── merge/page.tsx           # Merge PDFs tool
-│   ├── split/page.tsx           # Split PDF tool
-│   └── toolkit/page.tsx         # All-in-one toolkit
-├── components/pdf/
-│   ├── PdfDropzone.tsx          # Drag-and-drop file upload zone
-│   ├── PageCard.tsx             # Single page thumbnail card
-│   └── ToolCard.tsx             # Home page feature card component
-├── lib/
-│   ├── pdf-operations.ts        # pdf-lib wrappers (merge, split, rotate, reorder, delete)
-│   └── pdf-renderer.ts          # pdfjs-dist page-to-thumbnail rendering
-└── CLAUDE.md                    # Internal development notes
-```
-
-### Technology Stack
-
-| Layer | Library | Version | Purpose |
-|-------|---------|---------|---------|
-| Framework | Next.js | 16 | App Router, server components |
-| PDF manipulation | `pdf-lib` | 1.17.1 | Read, merge, split, rotate, reorder PDF pages |
-| PDF rendering | `pdfjs-dist` | 4.10.38 | Render PDF pages to JPEG data URLs for thumbnails |
-| Drag and drop | `@dnd-kit/core` + `@dnd-kit/sortable` | 10.0.0 | Drag-to-reorder page sequence |
-| Icons | `lucide-react` | 0.475.0 | UI iconography |
-
-### Key Functions (`lib/pdf-operations.ts`)
-
-All functions accept `Uint8Array` and return `Uint8Array`. All processing is synchronous in the browser.
-
-```typescript
-// Merge multiple PDFs into one document
-async mergePdfs(pdfs: Uint8Array[]): Promise<Uint8Array>
-
-// Extract specific pages (0-indexed) into a new PDF
-async extractPages(pdf: Uint8Array, pageIndices: number[]): Promise<Uint8Array>
-
-// Rotate pages by angle (0, 90, 180, 270)
-// pageIndices is 0-indexed; angle is degrees
-async rotatePages(
-  pdf: Uint8Array,
-  pageIndices: number[],
-  angle: 0 | 90 | 180 | 270
-): Promise<Uint8Array>
-
-// Reorder pages into a new sequence (0-indexed indices)
-// newOrder[i] = original index of the page to place at position i
-async reorderPages(pdf: Uint8Array, newOrder: number[]): Promise<Uint8Array>
-
-// Delete specific pages (0-indexed)
-async deletePages(pdf: Uint8Array, toDelete: number[]): Promise<Uint8Array>
-
-// Apply all operations (delete → reorder → rotate) in sequence
-async applyAllOperations(
-  pdf: Uint8Array,
-  ops: {
-    newOrder?: number[];
-    toDelete?: number[];
-    rotations?: Map<number, 0 | 90 | 180 | 270>;
-  }
-): Promise<{ bytes: Uint8Array; pageCount: number }>
-```
-
-### Key Functions (`lib/pdf-renderer.ts`)
-
-```typescript
-// Render a single PDF page to a JPEG data URL
-async renderPage(
-  pdf: Uint8Array,
-  pageIndex: number,
-  maxPx?: number
-): Promise<PageRender>
-
-// Render all pages of a PDF in parallel batches
-async renderAllPages(
-  pdf: Uint8Array,
-  maxPx?: number,
-  concurrency?: number
-): Promise<PageRender[]>
-```
-
-`PageRender` interface:
-```typescript
-interface PageRender {
-  pageIndex: number;   // 0-indexed
-  dataUrl: string;    // JPEG base64 data URL
-  width: number;      // Physical page width in points
-  height: number;     // Physical page height in points
-}
-```
-
-### Page Flow
-
-#### `/merge` — Merge PDFs
-1. User drops multiple PDF files onto the dropzone
-2. Each file is read as `Uint8Array` and page count extracted via `pdf-lib`
-3. File list shown with drag-order arrows to reorder merge sequence
-4. User clicks **Merge N files** → `mergePdfs()` → result as Blob → download link
-
-#### `/split` — Split PDF
-1. User drops a single PDF file
-2. All pages rendered as thumbnails via `renderAllPages()`
-3. User clicks pages to toggle selection, or enters a range string (e.g. `1-3, 5`)
-4. User clicks **Extract** → `extractPages()` → result as Blob → download link
-
-#### `/toolkit` — Full Toolkit
-1. User drops multiple PDFs → `mergePdfs()` → combined document loaded
-2. All pages rendered as draggable thumbnail grid via `@dnd-kit`
-3. Per-page toolbar: Rotate CW, Delete
-4. User drags to reorder, clicks action buttons to modify
-5. User clicks **Download** → operations applied in order → result as Blob → download
-
-### Data Privacy
-
-All PDF processing occurs client-side using `pdf-lib` and `pdfjs-dist` running in the browser. No file data is ever transmitted over a network. This is verified by design — there are no API routes, no serverless functions, and no database connections in this application.
-
----
-
-## Deployment
-
-The application is deployed on Vercel and uses the standard Next.js deployment pipeline.
-
-- **Live URL**: https://pdf-toolkit-hazel.vercel.app
-- **Build command**: `npm run build`
-- **Node.js version**: 24 LTS
-- **Framework**: Next.js 16 with Turbopack
-
-To deploy your own instance:
+## Quick Start
 
 ```bash
-# Clone the repository
 git clone https://github.com/tommytang2414/pdf-toolkit.git
 cd pdf-toolkit
-
-# Install dependencies
 npm install
-
-# Run locally
 npm run dev
+```
 
-# Deploy to Vercel
+Open [http://localhost:3000](http://localhost:3000)
+
+To deploy to Vercel:
+
+```bash
 npx vercel --prod
 ```
 
 ---
 
+## Tech Stack
+
+| Layer | Library | Purpose |
+|-------|---------|---------|
+| Framework | Next.js 16 + Turbopack | App Router, static export |
+| PDF manipulation | `pdf-lib` | merge, split, rotate, reorder, delete |
+| PDF rendering | `pdfjs-dist` | page thumbnails as JPEG data URLs |
+| Drag & drop | `@dnd-kit` | drag-to-reorder pages in toolkit |
+| Styling | Tailwind CSS v4 + CSS variables | dark + amber gold design system |
+| Icons | `lucide-react` | UI icons |
+| Icons / images | MiniMax `image-01` | tool card icons (generated) |
+
+---
+
+## Design System
+
+**Aesthetic**: Dark + Amber Gold — personal maker project, not corporate SaaS.
+
+### Color Palette
+
+```css
+--bg: #07070a          /* near-black background */
+--bg-secondary: #111116 /* card / input backgrounds */
+--bg-card: #0f0f14     /* elevated surfaces */
+--border: #1f1f28      /* subtle borders */
+--text: #f0ede6        /* off-white text */
+--text-muted: #7a746e  /* secondary text */
+--accent: #d97706      /* amber */
+--accent-light: #f59e0b/* gold */
+--accent-glow: rgba(217,119,6,0.15)
+```
+
+### Key CSS Classes
+
+| Class | Purpose |
+|-------|---------|
+| `.ambient-bg` | Radial amber glow on page backgrounds |
+| `.card-glow:hover` | Amber border + glow on card hover |
+| `.dropzone` | Drag-and-drop upload area |
+| `.btn-primary` | Amber CTA buttons |
+| `.btn-secondary` | Ghost/outline buttons |
+| `.result-banner` | Green success banner |
+| `.page-grid` | Page thumbnail grid (split page) |
+| `.toolkit-grid` | Flex wrap page grid (toolkit) |
+| `.score-badge` | Amber mono badge |
+
+### Typography
+
+- **Sans**: Inter (via `next/font/google`)
+- **Mono**: JetBrains Mono (via `next/font/google`)
+- Font variables: `--font-sans`, `--font-mono`
+
+---
+
+## Project Structure
+
+```
+pdf-toolkit/
+├── app/
+│   ├── layout.tsx          # Root layout, metadata, fonts
+│   ├── page.tsx            # Home — feature cards + hero
+│   ├── globals.css         # Design system, CSS variables, all classes
+│   ├── merge/page.tsx      # Merge PDFs
+│   ├── split/page.tsx      # Split PDF
+│   └── toolkit/page.tsx    # All-in-one: merge + rotate + reorder + delete
+├── components/pdf/
+│   └── PdfDropzone.tsx     # Drag-and-drop upload zone (50MB soft / 100MB hard limit)
+├── hooks/
+│   └── useBlobUrl.ts       # Blob URL management with auto-cleanup
+├── lib/
+│   ├── pdf-operations.ts   # pdf-lib wrappers: merge, split, rotate, reorder, delete
+│   └── pdf-renderer.ts     # pdfjs-dist: render pages to JPEG data URLs
+├── public/
+│   ├── favicon.svg         # Custom amber-gold PDF favicon
+│   └── images/             # MiniMax-generated tool icons
+│       ├── icon-merge.jpeg
+│       ├── icon-split.jpeg
+│       └── icon-toolkit.jpeg
+└── CLAUDE.md               # Development notes
+```
+
+---
+
+## PDF Operations (`lib/pdf-operations.ts`)
+
+All functions accept `Uint8Array`, return `Uint8Array`. No network calls.
+
+```typescript
+mergePdfs(pdfs: Uint8Array[]): Promise<Uint8Array>
+extractPages(pdf: Uint8Array, pageIndices: number[]): Promise<Uint8Array>
+rotatePages(pdf: Uint8Array, rotations: Map<number, Rotation>): Promise<Uint8Array>
+reorderPages(pdf: Uint8Array, newOrder: number[]): Promise<Uint8Array>
+deletePages(pdf: Uint8Array, toDelete: number[]): Promise<Uint8Array>
+
+// Rotation type: 0 | 90 | 180 | 270
+```
+
+`lib/pdf-renderer.ts`:
+
+```typescript
+renderPage(pdf: Uint8Array, pageIndex: number, maxPx?: number): Promise<PageRender>
+renderAllPages(pdf: Uint8Array, maxPx?: number, concurrency?: number): Promise<PageRender[]>
+
+interface PageRender {
+  pageIndex: number;  // 0-indexed
+  dataUrl: string;    // JPEG base64 data URL
+  width: number;      // physical width in points
+  height: number;     // physical height in points
+}
+```
+
+---
+
+## File Size Limits
+
+| Limit | Value | Behaviour |
+|-------|-------|-----------|
+| Soft limit | 50 MB | Warning in browser console |
+| Hard limit | 100 MB | Upload rejected, error message shown |
+
+Enforced in `components/pdf/PdfDropzone.tsx`.
+
+---
+
+## Environment Variables
+
+```
+MINIMAX_API_KEY=...   # For icon generation (not needed for runtime)
+```
+
+Runtime requires no server-side environment variables — all processing is client-side.
+
+---
+
 ## Changelog
 
-### 2026-05-31 — Initial release
-- `321e10c` — PDF Toolkit launched with Merge, Split, and Full Toolkit pages
-- All PDF operations (merge, split, rotate, reorder, delete) implemented client-side
-- Deploy to Vercel: https://pdf-toolkit-hazel.vercel.app
-- Repository: https://github.com/tommytang2414/pdf-toolkit
+### 2026-05-31 — Maker Identity + Dark/Amber Gold Redesign
+- `7ac4c40` — Full UI redesign: dark + amber gold aesthetic with ambient glow effects
+- Custom SVG favicon (amber-gold PDF icon)
+- "by tommytang" badge + maker credit on every page
+- GitHub "View source" links in all page footers
+- Updated metadata: "PDF Toolkit — by tommytang"
+- MiniMax image-01 generated tool icons
+- Softer, more personal copy throughout
+
+### 2026-05-31 — Initial Launch
+- `daf9f53` — feat: full UI redesign (first major release)
+- `e90ce60` — fix: critical bugs (deletePages, reorderPages, rotation index mapping)
+- `e7b9904` — docs: add README with full function spec
+- `321e10c` — Initial commit: PDF Toolkit with merge, split, toolkit pages
+- Deployed to: https://pdf-toolkit-hazel.vercel.app
+
+---
+
+## Build & Deploy
+
+```bash
+# Build locally
+npm run build
+
+# Deploy to Vercel (preview)
+npx vercel
+
+# Deploy to Vercel (production)
+npx vercel --prod
+
+# Run dev server
+npm run dev
+```
+
+Build requires Node.js 24 LTS. All routes are statically prerendered — no serverless functions used.
