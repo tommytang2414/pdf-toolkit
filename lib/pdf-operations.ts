@@ -111,11 +111,9 @@ export async function deletePages(
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.load(pdf);
   const deleteSet = new Set(toDelete);
-  const indices = doc
-    .getPageIndices()
-    .filter((i) => !deleteSet.has(i));
-  const pages = await doc.copyPages(doc, indices);
+  const indices = doc.getPageIndices().filter((i) => !deleteSet.has(i));
   const dest = await PDFDocument.create();
+  const pages = await dest.copyPages(doc, indices);
   pages.forEach((p) => dest.addPage(p));
   return dest.save();
 }

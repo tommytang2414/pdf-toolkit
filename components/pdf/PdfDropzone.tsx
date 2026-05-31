@@ -13,14 +13,12 @@ interface PdfFile {
 interface Props {
   onFiles(files: PdfFile[]): void;
   multiple?: boolean;
-  accept?: string;
 }
 
-export default function PdfDropzone({
-  onFiles,
-  multiple = true,
-  accept = ".pdf",
-}: Props) {
+const SOFT_LIMIT = 50 * 1024 * 1024; // 50 MB — warn only
+const HARD_LIMIT = 100 * 1024 * 1024; // 100 MB — block
+
+export default function PdfDropzone({ onFiles, multiple = true }: Props) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +26,7 @@ export default function PdfDropzone({
     async (raw: FileList | File[]) => {
       setError(null);
       const files = Array.from(raw).filter((f) => f.type === "application/pdf");
+
       if (files.length === 0) {
         setError("Please drop PDF files only.");
         return;
@@ -37,10 +36,21 @@ export default function PdfDropzone({
         return;
       }
 
+      // Size checks
+      for (const file of files) {
+        if (file.size > HARD_LIMIT) {
+          setError(`"${file.name}" exceeds the 100 MB file size limit.`);
+          return;
+        }
+        if (file.size > SOFT_LIMIT) {
+          // Non-fatal — pass through but we could show a warning
+          console.warn(`[PdfDropzone] Large file warning: "${file.name}" (${(file.size / 1024 / 1024).toFixed(1)} MB)`);
+        }
+      }
+
       const results: PdfFile[] = [];
       for (const file of files) {
         const bytes = new Uint8Array(await file.arrayBuffer());
-        // Quick page count via pdf-lib (sync, no worker)
         const { PDFDocument } = await import("pdf-lib");
         const doc = await PDFDocument.load(bytes);
         results.push({ file, bytes, name: file.name, pageCount: doc.getPageCount() });
@@ -66,7 +76,7 @@ export default function PdfDropzone({
       onClick={() => {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = accept;
+        input.accept = ".pdf";
         input.multiple = multiple;
         input.onchange = () => {
           if (input.files) processFiles(input.files);
@@ -80,7 +90,7 @@ export default function PdfDropzone({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 12,
+        gap: 10,
         cursor: "pointer",
         background: dragging ? "rgba(124,58,237,0.05)" : "transparent",
         transition: "all 0.2s",
@@ -89,15 +99,15 @@ export default function PdfDropzone({
     >
       <Upload size={40} color={dragging ? "var(--accent)" : "var(--text-muted)"} />
       <p style={{ margin: 0, fontSize: 16, color: "var(--text-muted)", textAlign: "center" }}>
-        {dragging
-          ? "Drop here"
-          : `Click or drag & drop PDF files${multiple ? " here" : " here"}`}
+        {dragging ? "Drop here" : "Click or drag & drop PDF files here"}
       </p>
       <p style={{ margin: 0, fontSize: 13, color: "#52525b" }}>
-        {multiple ? "Multiple files supported" : "Single file only"}
+        {multiple ? "Multiple files supported" : "Single file only"} · Max 100 MB
       </p>
       {error && (
-        <p style={{ margin: 0, fontSize: 13, color: "#f87171" }}>{error}</p>
+        <p style={{ margin: 0, fontSize: 13, color: "#f87171", textAlign: "center" }}>
+          {error}
+        </p>
       )}
     </div>
   );

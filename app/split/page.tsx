@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { extractPages } from "@/lib/pdf-operations";
 import { renderAllPages } from "@/lib/pdf-renderer";
+import { useBlobUrl } from "@/hooks/useBlobUrl";
 import PdfDropzone from "@/components/pdf/PdfDropzone";
 import { Download, ChevronLeft } from "lucide-react";
 
@@ -26,9 +27,10 @@ export default function SplitPage() {
   const [pages, setPages] = useState<PageThumb[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [rangeInput, setRangeInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const { create: createUrl, revoke: revokeUrl } = useBlobUrl();
 
   const handleFiles = useCallback(async (files: PdfFile[]) => {
     if (!files[0]) return;
@@ -37,22 +39,22 @@ export default function SplitPage() {
     setSelected(new Set());
     setResultUrl(null);
     setError(null);
+    revokeUrl();
     setLoading(true);
     try {
       const thumbs = await renderAllPages(f.bytes, 160, 4);
       setPages(thumbs);
-    } catch (e) {
+    } catch {
       setError("Could not render PDF pages.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [revokeUrl]);
 
   const toggleSelect = (idx: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
       return next;
     });
   };
@@ -61,8 +63,10 @@ export default function SplitPage() {
     const results: [number, number][] = [];
     for (const part of input.split(",").map((s) => s.trim())) {
       if (!part) continue;
-      if (part.includes("-")) {
-        const [a, b] = part.split("-").map((s) => parseInt(s.trim()));
+      const dashIdx = part.indexOf("-");
+      if (dashIdx > 0) {
+        const a = parseInt(part.slice(0, dashIdx).trim());
+        const b = parseInt(part.slice(dashIdx + 1).trim());
         if (!isNaN(a) && !isNaN(b) && a <= b) results.push([a, b]);
       } else {
         const n = parseInt(part);
@@ -83,7 +87,7 @@ export default function SplitPage() {
       } else {
         const ranges = parseRanges(rangeInput);
         if (ranges.length === 0) {
-          setError("Invalid range format. Use: 1-3, 5, 7-9");
+          setError('Invalid range. Use: 1-3, 5, 7-9');
           setLoading(false);
           return;
         }
@@ -94,15 +98,15 @@ export default function SplitPage() {
       }
 
       if (indices.length === 0) {
-        setError("No pages selected.");
+        setError("No pages in that range.");
         setLoading(false);
         return;
       }
 
       const bytes = await extractPages(pdfFile.bytes, indices);
-      const blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
-      setResultUrl(URL.createObjectURL(blob));
-    } catch (e) {
+      const url = createUrl(bytes);
+      setResultUrl(url);
+    } catch {
       setError("Failed to extract pages.");
     } finally {
       setLoading(false);
@@ -111,6 +115,10 @@ export default function SplitPage() {
 
   const selectAll = () => setSelected(new Set(pages.map((p) => p.pageIndex)));
   const selectNone = () => setSelected(new Set());
+
+  const extractedCount = selected.size > 0
+    ? selected.size
+    : rangeInput.trim() ? parseRanges(rangeInput).reduce((sum, [s, e]) => sum + (e - s + 1), 0) : 0;
 
   return (
     <div style={{ minHeight: "100vh", padding: "32px 24px", maxWidth: 900, margin: "0 auto" }}>
@@ -127,30 +135,17 @@ export default function SplitPage() {
         </div>
       </div>
 
-      {/* Dropzone */}
       <PdfDropzone multiple={false} onFiles={handleFiles} />
 
-      {/* Loading state */}
       {loading && !pdfFile && (
         <div style={{ marginTop: 24, textAlign: "center", color: "var(--text-muted)" }}>
           Rendering pages...
         </div>
       )}
 
-      {/* Page grid */}
       {pages.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          {/* Toolbar */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 16,
-              flexWrap: "wrap",
-              gap: 8,
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexWrap: "wrap", gap: 8 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <p style={{ margin: 0, fontSize: 14, color: "var(--text-muted)" }}>
                 {pages.length} pages total
@@ -159,28 +154,18 @@ export default function SplitPage() {
               <button onClick={selectAll} style={linkBtn}>Select all</button>
               <button onClick={selectNone} style={linkBtn}>Clear</button>
               {selected.size > 0 && (
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontFamily: "var(--font-geist-mono)",
-                    color: "var(--accent)",
-                    background: "rgba(124,58,237,0.12)",
-                    border: "1px solid rgba(124,58,237,0.25)",
-                    borderRadius: 6,
-                    padding: "2px 10px",
-                  }}
-                >
+                <span style={badge}>
                   {selected.size} selected
                 </span>
               )}
             </div>
 
-            {/* Range input */}
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input
                 value={rangeInput}
                 onChange={(e) => setRangeInput(e.target.value)}
                 placeholder="e.g. 1-3, 5, 7-9"
+                onKeyDown={(e) => e.key === "Enter" && handleExtract("range")}
                 style={{
                   background: "var(--bg-secondary)",
                   border: "1px solid var(--border)",
@@ -198,38 +183,21 @@ export default function SplitPage() {
               <button
                 onClick={() => handleExtract("range")}
                 disabled={!rangeInput.trim() || loading}
-                style={{
-                  ...actionBtn,
-                  opacity: !rangeInput.trim() || loading ? 0.5 : 1,
-                  cursor: !rangeInput.trim() || loading ? "not-allowed" : "pointer",
-                }}
+                style={{ ...actionBtn, opacity: !rangeInput.trim() || loading ? 0.5 : 1, cursor: !rangeInput.trim() || loading ? "not-allowed" : "pointer" }}
               >
                 Extract range
               </button>
             </div>
           </div>
 
-          {/* Page grid */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
-              gap: 12,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 12 }}>
             {pages.map((page) => {
               const isSelected = selected.has(page.pageIndex);
               return (
                 <div
                   key={page.pageIndex}
                   onClick={() => toggleSelect(page.pageIndex)}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 6,
-                    cursor: "pointer",
-                  }}
+                  style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, cursor: "pointer" }}
                 >
                   <div
                     style={{
@@ -244,27 +212,9 @@ export default function SplitPage() {
                       transition: "border-color 0.15s, box-shadow 0.15s",
                     }}
                   >
-                    <img
-                      src={page.dataUrl}
-                      alt={`Page ${page.pageIndex + 1}`}
-                      style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", pointerEvents: "none" }}
-                    />
-                    {isSelected && (
-                      <div style={{ position: "absolute", inset: 0, background: "rgba(124,58,237,0.15)" }} />
-                    )}
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: 3,
-                        right: 3,
-                        background: "rgba(0,0,0,0.75)",
-                        borderRadius: 4,
-                        padding: "1px 5px",
-                        fontSize: 10,
-                        fontFamily: "var(--font-geist-mono)",
-                        color: isSelected ? "var(--accent)" : "#fafafa",
-                      }}
-                    >
+                    <img src={page.dataUrl} alt={`Page ${page.pageIndex + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", pointerEvents: "none" }} />
+                    {isSelected && <div style={{ position: "absolute", inset: 0, background: "rgba(124,58,237,0.15)" }} />}
+                    <div style={{ position: "absolute", bottom: 3, right: 3, background: "rgba(0,0,0,0.75)", borderRadius: 4, padding: "1px 5px", fontSize: 10, fontFamily: "var(--font-geist-mono)", color: isSelected ? "var(--accent)" : "#fafafa" }}>
                       {page.pageIndex + 1}
                     </div>
                   </div>
@@ -273,7 +223,6 @@ export default function SplitPage() {
             })}
           </div>
 
-          {/* Extract selected */}
           {selected.size > 0 && (
             <button
               onClick={() => handleExtract("selected")}
@@ -290,59 +239,34 @@ export default function SplitPage() {
                 cursor: loading ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 8,
                 opacity: loading ? 0.7 : 1,
+                width: "100%",
+                maxWidth: 360,
               }}
             >
-              {loading ? "Extracting..." : `Extract ${selected.size} selected page${selected.size > 1 ? "s" : ""}`}
+              {loading ? "Extracting..." : `Extract ${selected.size} page${selected.size > 1 ? "s" : ""}`}
               <Download size={15} />
             </button>
           )}
 
-          {error && (
-            <p style={{ color: "#f87171", fontSize: 13, marginTop: 12 }}>{error}</p>
-          )}
+          {error && <p style={{ color: "#f87171", fontSize: 13, marginTop: 12 }}>{error}</p>}
         </div>
       )}
 
-      {/* Result */}
       {resultUrl && (
-        <div
-          style={{
-            marginTop: 24,
-            background: "rgba(34,197,94,0.08)",
-            border: "1px solid rgba(34,197,94,0.3)",
-            borderRadius: 12,
-            padding: "20px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 16,
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ marginTop: 24, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.3)", borderRadius: 12, padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <p style={{ margin: 0, fontWeight: 600 }}>Extraction complete!</p>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
-              {selected.size > 0 ? `${selected.size} pages` : rangeInput} extracted
+              {extractedCount} page{extractedCount !== 1 ? "s" : ""} extracted
             </p>
           </div>
           <a
             href={resultUrl}
             download={`extracted-${Date.now()}.pdf`}
-            style={{
-              background: "#22c55e",
-              color: "#052e16",
-              borderRadius: 8,
-              padding: "10px 20px",
-              fontWeight: 600,
-              fontSize: 14,
-              textDecoration: "none",
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flexShrink: 0,
-            }}
+            style={{ background: "#22c55e", color: "#052e16", borderRadius: 8, padding: "10px 20px", fontWeight: 600, fontSize: 14, textDecoration: "none", display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}
           >
             <Download size={15} /> Download PDF
           </a>
@@ -352,21 +276,6 @@ export default function SplitPage() {
   );
 }
 
-const linkBtn: React.CSSProperties = {
-  background: "none",
-  border: "none",
-  color: "var(--accent)",
-  fontSize: 13,
-  cursor: "pointer",
-  padding: "2px 4px",
-};
-
-const actionBtn: React.CSSProperties = {
-  background: "var(--bg-secondary)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  padding: "7px 14px",
-  color: "var(--text)",
-  fontSize: 13,
-  fontWeight: 500,
-};
+const linkBtn: React.CSSProperties = { background: "none", border: "none", color: "var(--accent)", fontSize: 13, cursor: "pointer", padding: "2px 4px" };
+const actionBtn: React.CSSProperties = { background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 8, padding: "7px 14px", color: "var(--text)", fontSize: 13, fontWeight: 500 };
+const badge: React.CSSProperties = { fontSize: 12, fontFamily: "var(--font-geist-mono)", color: "var(--accent)", background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.25)", borderRadius: 6, padding: "2px 10px" };

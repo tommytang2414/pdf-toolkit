@@ -3,8 +3,9 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { mergePdfs } from "@/lib/pdf-operations";
+import { useBlobUrl } from "@/hooks/useBlobUrl";
 import PdfDropzone from "@/components/pdf/PdfDropzone";
-import { Download, RotateCw, ChevronLeft } from "lucide-react";
+import { Download, ChevronLeft, RotateCw } from "lucide-react";
 
 interface PdfFile {
   file: File;
@@ -16,18 +17,22 @@ interface PdfFile {
 export default function MergePage() {
   const [files, setFiles] = useState<PdfFile[]>([]);
   const [loading, setLoading] = useState(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { create: createUrl, revoke: revokeUrl } = useBlobUrl();
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
 
   const handleFiles = useCallback((newFiles: PdfFile[]) => {
     setFiles((prev) => [...prev, ...newFiles]);
     setResultUrl(null);
     setError(null);
-  }, []);
+    revokeUrl();
+  }, [revokeUrl]);
 
   const removeFile = (idx: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== idx));
     setResultUrl(null);
+    setError(null);
+    revokeUrl();
   };
 
   const moveFile = (from: number, to: number) => {
@@ -46,10 +51,9 @@ export default function MergePage() {
     setError(null);
     try {
       const bytes = await mergePdfs(files.map((f) => f.bytes));
-      const blob = new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
-      const url = URL.createObjectURL(blob);
+      const url = createUrl(bytes);
       setResultUrl(url);
-    } catch (e) {
+    } catch {
       setError("Failed to merge PDFs. Make sure all files are valid.");
     } finally {
       setLoading(false);
@@ -93,7 +97,6 @@ export default function MergePage() {
                 gap: 12,
               }}
             >
-              {/* Order badge */}
               <span
                 style={{
                   fontFamily: "var(--font-geist-mono)",
@@ -109,8 +112,6 @@ export default function MergePage() {
               >
                 {idx + 1}
               </span>
-
-              {/* File name + page count */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p
                   style={{
@@ -128,16 +129,11 @@ export default function MergePage() {
                   {f.pageCount} page{f.pageCount > 1 ? "s" : ""}
                 </p>
               </div>
-
-              {/* Reorder buttons */}
               <div style={{ display: "flex", gap: 4 }}>
                 <button
                   onClick={() => moveFile(idx, idx - 1)}
                   disabled={idx === 0}
-                  style={{
-                    ...arrowBtn,
-                    opacity: idx === 0 ? 0.3 : 1,
-                  }}
+                  style={{ ...arrowBtn, opacity: idx === 0 ? 0.3 : 1 }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M12 19V5M5 12l7-7 7 7" />
@@ -146,22 +142,14 @@ export default function MergePage() {
                 <button
                   onClick={() => moveFile(idx, idx + 1)}
                   disabled={idx === files.length - 1}
-                  style={{
-                    ...arrowBtn,
-                    opacity: idx === files.length - 1 ? 0.3 : 1,
-                  }}
+                  style={{ ...arrowBtn, opacity: idx === files.length - 1 ? 0.3 : 1 }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M12 5v14M5 12l7 7 7-7" />
                   </svg>
                 </button>
               </div>
-
-              {/* Remove */}
-              <button
-                onClick={() => removeFile(idx)}
-                style={{ ...arrowBtn, color: "#f87171" }}
-              >
+              <button onClick={() => removeFile(idx)} style={{ ...arrowBtn, color: "#f87171" }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
@@ -194,9 +182,7 @@ export default function MergePage() {
             {!loading && <Download size={16} />}
           </button>
 
-          {error && (
-            <p style={{ color: "#f87171", fontSize: 13, margin: 0 }}>{error}</p>
-          )}
+          {error && <p style={{ color: "#f87171", fontSize: 13, margin: 0 }}>{error}</p>}
         </div>
       )}
 
@@ -219,7 +205,7 @@ export default function MergePage() {
           <div>
             <p style={{ margin: 0, fontWeight: 600 }}>Merge complete!</p>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-muted)" }}>
-              {files.length} files combined — download your PDF below.
+              {files.length} files combined
             </p>
           </div>
           <a

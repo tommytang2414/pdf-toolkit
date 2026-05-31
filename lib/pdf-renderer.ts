@@ -99,9 +99,9 @@ export async function renderAllPages(
   const results: PageRender[] = new Array(numPages);
   for (let i = 0; i < numPages; i += concurrency) {
     const batch = tasks.slice(i, i + concurrency);
-    const settled = await Promise.allSettled(batch);
-    settled.forEach((r, j) => {
-      if (r.status === "fulfilled") results[i + j] = r.value;
+    const settled = await Promise.all(batch);
+    settled.forEach((page) => {
+      results[page.pageIndex] = page;
     });
   }
 
