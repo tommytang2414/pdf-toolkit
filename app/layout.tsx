@@ -3,8 +3,11 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PDF Toolkit",
-  description: "Merge, split, rotate, and reorder PDFs — in your browser",
+  title: "PDF Toolkit — by tommytang",
+  description: "Merge, split, rotate, and reorder PDFs. No upload. No tracking. Just works.",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 const GeistSans = Inter({
