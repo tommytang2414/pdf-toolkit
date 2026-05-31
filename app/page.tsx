@@ -1,136 +1,97 @@
-import ToolCard from "@/components/pdf/ToolCard";
+import Link from "next/link";
 
 const tools = [
   {
     href: "/merge",
     title: "Merge PDFs",
-    description: "Combine multiple PDFs into a single file. Drag to reorder before merging.",
-    badge: "Combine",
-    icon: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="10" height="18" rx="1.5" />
-        <rect x="11" y="3" width="10" height="18" rx="1.5" />
-        <path d="M7 12h10" />
-        <path d="M12 9l3 3-3 3" />
-      </svg>
-    ),
+    description: "Combine multiple PDFs into one. Drag to reorder before merging.",
+    tag: "Combine",
+    img: "/images/icon-merge.jpeg",
   },
   {
     href: "/split",
     title: "Split PDF",
-    description: "Extract specific pages or split by page ranges into separate files.",
-    badge: "Extract",
-    icon: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <path d="M12 3v18" />
-        <path d="M8 8.5l2 1.5-2 1.5" />
-        <path d="M16 13.5l-2 1.5 2 1.5" />
-      </svg>
-    ),
+    description: "Extract specific pages or split by range into separate files.",
+    tag: "Extract",
+    img: "/images/icon-split.jpeg",
   },
   {
     href: "/toolkit",
     title: "Full Toolkit",
-    description: "Merge, reorder, rotate, and delete — all in one page. Maximum control.",
-    badge: "All-in-one",
-    icon: (
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2l3 7h7l-5.5 4.5 2 7L12 17l-6.5 3.5 2-7L2 9h7z" />
-      </svg>
-    ),
+    description: "Merge, reorder, rotate, and delete — all in one place.",
+    tag: "All-in-one",
+    img: "/images/icon-toolkit.jpeg",
   },
 ];
 
 export default function HomePage() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "40px 24px",
-        gap: 56,
-      }}
-    >
+    <div className="ambient-bg" style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 24px", gap: 64 }}>
       {/* Header */}
       <div style={{ textAlign: "center", maxWidth: 520 }}>
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            background: "var(--bg-secondary)",
-            border: "1px solid var(--border)",
-            borderRadius: 100,
-            padding: "6px 16px",
-            marginBottom: 24,
-            fontSize: 13,
-            color: "var(--text-muted)",
-            fontFamily: "var(--font-geist-mono)",
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--accent)" stroke="none">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" stroke="var(--accent)" strokeWidth="2" fill="none" />
+        <span className="tag" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" stroke="var(--accent)" strokeWidth="2" fill="none" />
+            <path d="M12 8v4l3 3" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          100% browser-side — no uploads, no servers
-        </div>
+          100% browser-side — files never leave your device
+        </span>
 
-        <h1
-          style={{
-            fontSize: "clamp(40px, 8vw, 72px)",
-            fontWeight: 700,
-            letterSpacing: "-0.04em",
-            lineHeight: 1.05,
-            margin: "0 0 16px",
-            background: "linear-gradient(160deg, #fafafa 30%, #a78bfa)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          PDF Toolkit
+        <h1 style={{ fontSize: "clamp(44px, 9vw, 80px)", fontWeight: 700, letterSpacing: "-0.04em", lineHeight: 1.05, margin: "0 0 18px" }}>
+          <span style={{ color: "var(--accent)" }}>PDF</span>
+          <br />
+          <span style={{ color: "var(--text)", fontStyle: "italic", fontWeight: 300 }}>Toolkit</span>
         </h1>
-        <p
-          style={{
-            fontSize: 17,
-            color: "var(--text-muted)",
-            lineHeight: 1.6,
-            margin: 0,
-          }}
-        >
-          Merge, split, rotate, and reorder — your PDFs never leave your device.
+        <p style={{ fontSize: 17, color: "var(--text-muted)", lineHeight: 1.6, margin: 0 }}>
+          Merge, split, rotate, and reorder — your PDFs never leave your browser.
         </p>
       </div>
 
       {/* Tool cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: 16,
-          width: "100%",
-          maxWidth: 900,
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, width: "100%", maxWidth: 860 }}>
         {tools.map((tool) => (
-          <ToolCard key={tool.href} {...tool} />
+          <Link key={tool.href} href={tool.href} style={{ textDecoration: "none" }}>
+            <div
+              className="card-glow"
+              style={{
+                background: "var(--bg-card)",
+                border: "1px solid var(--border)",
+                borderRadius: 20,
+                padding: "24px 22px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+                cursor: "pointer",
+                transition: "all 0.25s ease",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ width: 64, height: 64, borderRadius: 14, overflow: "hidden", background: "var(--bg-secondary)", border: "1px solid var(--border)" }}>
+                  <img src={tool.img} alt={tool.title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                </div>
+                <span className="tag">{tool.tag}</span>
+              </div>
+
+              <div>
+                <h2 style={{ fontSize: 17, fontWeight: 600, margin: "0 0 6px", letterSpacing: "-0.01em" }}>{tool.title}</h2>
+                <p style={{ fontSize: 13.5, color: "var(--text-muted)", margin: 0, lineHeight: 1.55 }}>{tool.description}</p>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--accent)", fontWeight: 500, marginTop: 2 }}>
+                Open tool
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          </Link>
         ))}
       </div>
 
-      {/* Footer tagline */}
-      <p
-        style={{
-          fontSize: 12,
-          color: "#3f3f46",
-          fontFamily: "var(--font-geist-mono)",
-          textAlign: "center",
-        }}
-      >
-        Built with pdf-lib &amp; pdfjs-dist · all processing happens in your browser
+      {/* Footer */}
+      <p style={{ fontSize: 11.5, color: "#3a3530", fontFamily: "var(--font-mono)", letterSpacing: "0.04em" }}>
+        Built with pdf-lib &amp; pdfjs-dist
       </p>
-    </main>
+    </div>
   );
 }
