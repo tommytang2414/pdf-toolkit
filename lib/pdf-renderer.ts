@@ -27,7 +27,11 @@ export interface PageRender {
  */
 export async function getPageCount(pdf: Uint8Array): Promise<number> {
   const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
-  return doc.numPages;
+  try {
+    return doc.numPages;
+  } finally {
+    await doc.destroy();
+  }
 }
 
 /**
@@ -40,25 +44,29 @@ export async function renderPage(
   maxPx = 200
 ): Promise<PageRender> {
   const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
-  const page = await doc.getPage(pageIndex + 1); // pdfjs is 1-indexed
+  try {
+    const page = await doc.getPage(pageIndex + 1); // pdfjs is 1-indexed
 
-  const viewport = page.getViewport({ scale: 1 });
-  const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
-  const scaledViewport = page.getViewport({ scale });
+    const viewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
+    const scaledViewport = page.getViewport({ scale });
 
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(scaledViewport.width);
-  canvas.height = Math.round(scaledViewport.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(scaledViewport.width);
+    canvas.height = Math.round(scaledViewport.height);
 
-  const ctx = canvas.getContext("2d")!;
-  await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+    const ctx = canvas.getContext("2d")!;
+    await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
 
-  return {
-    pageIndex,
-    dataUrl: canvas.toDataURL("image/jpeg", 0.85),
-    width: viewport.width,
-    height: viewport.height,
-  };
+    return {
+      pageIndex,
+      dataUrl: canvas.toDataURL("image/jpeg", 0.85),
+      width: viewport.width,
+      height: viewport.height,
+    };
+  } finally {
+    await doc.destroy();
+  }
 }
 
 /**
@@ -74,34 +82,38 @@ export async function renderAllPages(
     throw new RangeError("concurrency must be a positive integer");
   }
   const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
-  const numPages = doc.numPages;
+  try {
+    const numPages = doc.numPages;
 
-  const results: PageRender[] = [];
-  // Create work only when a batch has capacity; slicing started promises is not a limit.
-  for (let start = 0; start < numPages; start += concurrency) {
-    const tasks = Array.from({ length: Math.min(concurrency, numPages - start) }, async (_, offset) => {
-      const i = start + offset;
-      const page = await doc.getPage(i + 1);
-      const viewport = page.getViewport({ scale: 1 });
-      const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
-      const scaledViewport = page.getViewport({ scale });
+    const results: PageRender[] = [];
+    // Create work only when a batch has capacity; slicing started promises is not a limit.
+    for (let start = 0; start < numPages; start += concurrency) {
+      const tasks = Array.from({ length: Math.min(concurrency, numPages - start) }, async (_, offset) => {
+        const i = start + offset;
+        const page = await doc.getPage(i + 1);
+        const viewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
+        const scaledViewport = page.getViewport({ scale });
 
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(scaledViewport.width);
-      canvas.height = Math.round(scaledViewport.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(scaledViewport.width);
+        canvas.height = Math.round(scaledViewport.height);
 
-      const ctx = canvas.getContext("2d")!;
-      await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
 
-      return {
-        pageIndex: i,
-        dataUrl: canvas.toDataURL("image/jpeg", 0.85),
-        width: viewport.width,
-        height: viewport.height,
-      };
-    });
-    results.push(...await Promise.all(tasks));
+        return {
+          pageIndex: i,
+          dataUrl: canvas.toDataURL("image/jpeg", 0.85),
+          width: viewport.width,
+          height: viewport.height,
+        };
+      });
+      results.push(...await Promise.all(tasks));
+    }
+
+    return results;
+  } finally {
+    await doc.destroy();
   }
-
-  return results;
 }

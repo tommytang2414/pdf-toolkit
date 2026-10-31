@@ -9,6 +9,20 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-01 — PR lifecycle resource repair
+
+- PR #1: release each successfully loaded PDF.js document in finally, including page/render errors and empty documents. Returned thumbnails and caller byte copies remain usable.
+- The pinned bootstrap harness c7c7189 reproduces five cleanup failures before repair; all 14 cases pass on the working correction. DevOps-Scanner rechecks committed PR heads and publishes exact-commit evidence.
+- Keep this PR draft/unmerged and retain Git deployment suppression. Trigger is local Codex five-minute polling; no hosted Actions or automatic approval.
+
+### 2026-11-01 — Authorized production runtime rollout
+
+- Owner explicitly authorized production deployment in the vulnerability-remediation task, separate from any local-only pilot. Source `c7c7189` on `security/gpt-typescript-pilot` deployed as `dpl_7ZcwAtVkHbphXrLhZReqpcaWYAjV`; https://pdf-toolkit-hazel.vercel.app.
+- Fresh local build passed. Vercel READY/production, project linkage, alias and cloud Next 16.4.3 build verified; provider package/lock source identities match the committed export.
+- Synthetic browser merge (4 pages), extraction (2 pages), rotation (90 degrees) passed; zero page errors. Preserve independent renderer-pilot work and its no-auto-deploy rule.
+- Evidence: `C:/Users/User/ai-vulnerability-manager/workspaces/owner-apps-20261030/production-20261031/`. Previous deployments retained for rollback. No historical finding auto-closure.
+
+
 ### 2026-10-31 — PR workflow bootstrap
 
 - Disable Vercel Git auto-deployment before the first PR push. Added five lifecycle regressions for the existing PDF.js document cleanup gap; initial failures are expected before GPT remediation. No deliberately vulnerable source was introduced.
