@@ -2,6 +2,9 @@
 
 ## Current PR workflow — 2026-11-01 HKT
 
+- Latest owner-requested update: reject a null Canvas 2D context in both renderer paths. Entry fdf5d7316fd80adeb436f6b31bddd9077e8ffab8; the commit containing this note is the unattended acceptance head.
+- Next: the scheduled Codex heartbeat, not the active preparation turn, must run scanner/GPT review/trusted retest, publish/read back the exact-head PR result and retain scheduler provenance. No merge/deploy. Acceptance tracking lives in DevOps-Scanner/assessments/pr-unattended-acceptance-20261101.json.
+
 - Branch security/gpt-typescript-pilot; entry commit c7c7189800a2372aa378f4ae658c8da272aafa3d. The commit containing this entry is the lifecycle correction; Git HEAD is authoritative.
 - Draft PR https://github.com/tommytang2414/pdf-toolkit/pull/1. The owner authorized GPT scanning, review, bounded repair pushes and advisory comments. No merge, approval or deployment.
 - Added finally/destroy to all three renderer helpers. Trusted harness c7c7189: original 9 pass/5 fail; working correction 14 pass. The final committed rescan/review/retest and build evidence are retained in DevOps-Scanner docs/pr-security-workflow.md and the PR comment.

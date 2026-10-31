@@ -55,7 +55,10 @@ export async function renderPage(
     canvas.width = Math.round(scaledViewport.width);
     canvas.height = Math.round(scaledViewport.height);
 
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Could not create a 2D rendering context");
+    }
     await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
 
     return {
@@ -99,7 +102,10 @@ export async function renderAllPages(
         canvas.width = Math.round(scaledViewport.width);
         canvas.height = Math.round(scaledViewport.height);
 
-        const ctx = canvas.getContext("2d")!;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          throw new Error("Could not create a 2D rendering context");
+        }
         await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
 
         return {

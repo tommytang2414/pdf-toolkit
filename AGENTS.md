@@ -9,6 +9,11 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-01 — Explicit canvas allocation failure
+
+- Both rendering helpers reject a missing Canvas 2D context with an explicit error, before invoking PDF.js render. Existing finally cleanup still releases the acquired document.
+- This owner-requested PR update is the unattended trigger acceptance case. Scanner, GPT source review and pinned-harness retest are intentionally left to the next scheduled Codex heartbeat; do not claim them passed before its result.
+
 ### 2026-11-01 — PR lifecycle resource repair
 
 - PR #1: release each successfully loaded PDF.js document in finally, including page/render errors and empty documents. Returned thumbnails and caller byte copies remain usable.
