@@ -79,3 +79,10 @@ test('empty documents finish without scheduling page work', async () => {
   assert.equal((await api.renderAllPages(new Uint8Array())).length, 0);
   assert.equal(state.started, 0);
 });
+
+for (const value of [0, -1, 1.5, NaN, Infinity]) {
+  test(`invalid concurrency ${value} is rejected before loading a document`, async () => {
+    const { api } = await renderer(0);
+    await assert.rejects(api.renderAllPages(new Uint8Array(), 200, value), /positive integer/);
+  });
+}

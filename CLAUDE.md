@@ -10,6 +10,10 @@ Browser-based PDF manipulation — merge, split, rotate, reorder, delete. 100% c
 
 ---
 
+## Renderer security workflow
+
+`lib/pdf-renderer.ts` bundles its PDF.js worker with `new URL(..., import.meta.url)` and schedules page work in bounded batches. Run committed-source regressions through DevOps-Scanner retest-pdf-toolkit; use synthetic PDFs for browser checks. The helper retains all thumbnail results and trusts installed PDF.js; this is not complete document-memory isolation.
+
 ## Key Decisions
 
 ### No Server-Side Processing

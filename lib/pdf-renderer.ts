@@ -5,9 +5,11 @@
 
 import * as pdfjsLib from "pdfjs-dist";
 
-// Worker is loaded from the pdfjs-dist package itself.
-// Vite-friendly: use a CDN worker URL instead of a file path.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Bundle the matching installed worker; local PDF bytes never depend on runtime CDN code.
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 export interface PageRender {
   /** 0-indexed page number */
@@ -68,12 +70,18 @@ export async function renderAllPages(
   maxPx = 200,
   concurrency = 4
 ): Promise<PageRender[]> {
+  if (!Number.isInteger(concurrency) || concurrency < 1) {
+    throw new RangeError("concurrency must be a positive integer");
+  }
   const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
   const numPages = doc.numPages;
 
-  const tasks: Promise<PageRender>[] = [];
-  for (let i = 0; i < numPages; i++) {
-    const task = doc.getPage(i + 1).then(async (page) => {
+  const results: PageRender[] = [];
+  // Create work only when a batch has capacity; slicing started promises is not a limit.
+  for (let start = 0; start < numPages; start += concurrency) {
+    const tasks = Array.from({ length: Math.min(concurrency, numPages - start) }, async (_, offset) => {
+      const i = start + offset;
+      const page = await doc.getPage(i + 1);
       const viewport = page.getViewport({ scale: 1 });
       const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
       const scaledViewport = page.getViewport({ scale });
@@ -92,17 +100,7 @@ export async function renderAllPages(
         height: viewport.height,
       };
     });
-    tasks.push(task);
-  }
-
-  // Process in batches to avoid overwhelming the browser
-  const results: PageRender[] = new Array(numPages);
-  for (let i = 0; i < numPages; i += concurrency) {
-    const batch = tasks.slice(i, i + concurrency);
-    const settled = await Promise.all(batch);
-    settled.forEach((page) => {
-      results[page.pageIndex] = page;
-    });
+    results.push(...await Promise.all(tasks));
   }
 
   return results;

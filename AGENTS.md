@@ -11,3 +11,9 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 ### 2026-10-31 — GPT TypeScript security regression harness
 
 - Added offline before/after renderer tests for runtime worker origin, actual concurrency and output order. Trusted DevOps-Scanner adapter supplies the runtime; no new application dependency.
+
+### 2026-10-31 — Bound renderer work and bundle PDF worker
+
+- Create rendering promises only inside the current batch; validate positive integer concurrency. The old implementation started all pages before awaiting batches.
+- Resolve the matching installed PDF worker with import.meta.url so Next bundles a same-origin asset; no runtime CDN worker.
+- Nine offline regression checks pass locally. Full committed before/after evidence and local build/browser checks are recorded in AI_HANDOFF.md. Remaining document/result memory is not globally capped.
