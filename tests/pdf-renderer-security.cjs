@@ -11,13 +11,14 @@ const output = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
 }).outputText;
 
-async function renderer(count = 20) {
+async function renderer(count = 20, failPage = false) {
   const state = { started: 0, active: 0, peak: 0, destroyed: 0, pending: [] };
   const options = {};
   const doc = {
     numPages: count,
     destroy: async () => { state.destroyed++; },
     getPage: async (index) => {
+      if (failPage) throw new Error('synthetic page failure');
       state.started++;
       return {
         getViewport: ({ scale }) => ({ width: 100 * scale, height: 200 * scale }),
@@ -84,5 +85,34 @@ for (const value of [0, -1, 1.5, NaN, Infinity]) {
   test(`invalid concurrency ${value} is rejected before loading a document`, async () => {
     const { api } = await renderer(0);
     await assert.rejects(api.renderAllPages(new Uint8Array(), 200, value), /positive integer/);
+  });
+}
+
+test('page count releases the loaded PDF document', async () => {
+  const { api, state } = await renderer();
+  assert.equal(await api.getPageCount(new Uint8Array()), 20);
+  assert.equal(state.destroyed, 1);
+});
+
+test('single-page rendering releases the document after completion', async () => {
+  const { api, state } = await renderer();
+  const completion = api.renderPage(new Uint8Array(), 0);
+  await tick();
+  state.pending.splice(0).forEach(resolve => resolve());
+  await completion;
+  assert.equal(state.destroyed, 1);
+});
+
+test('batch rendering releases an empty loaded document', async () => {
+  const { api, state } = await renderer(0);
+  await api.renderAllPages(new Uint8Array());
+  assert.equal(state.destroyed, 1);
+});
+
+for (const method of ['renderPage', 'renderAllPages']) {
+  test(`${method} releases the loaded document when page loading fails`, async () => {
+    const { api, state } = await renderer(1, true);
+    await assert.rejects(api[method](new Uint8Array(), ...(method === 'renderPage' ? [0] : [])), /synthetic page failure/);
+    assert.equal(state.destroyed, 1);
   });
 }
