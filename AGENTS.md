@@ -17,3 +17,9 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 - Create rendering promises only inside the current batch; validate positive integer concurrency. The old implementation started all pages before awaiting batches.
 - Resolve the matching installed PDF worker with import.meta.url so Next bundles a same-origin asset; no runtime CDN worker.
 - Nine offline regression checks pass locally. Full committed before/after evidence and local build/browser checks are recorded in AI_HANDOFF.md. Remaining document/result memory is not globally capped.
+
+### 2026-10-31 — Web runtime security remediation
+
+- Next16.4.3/React19.2.9; track package-lock.json. Preserve PDF bytes at split/toolkit thumbnail call sites because the worker transfers its input.
+- Build/types and real synthetic PDF merge/extract/90-degree rotation passed; mobile shell has no overflow. Concurrent renderer pilot commits b88c025/e7d341d preserved.
+- Verify with the existing build plus runtime checks before rollout. Full report: `C:/Users/User/ai-vulnerability-manager/docs/WEB-RSC-REMEDIATION-20261031.md`. Local repair only; no production deployment/push or automatic vulnerability closure.

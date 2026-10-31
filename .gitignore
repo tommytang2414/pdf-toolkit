@@ -2,7 +2,6 @@
 .next/
 node_modules/
 .next-env.d.ts
-package-lock.json
 
 # Local environment files
 .env

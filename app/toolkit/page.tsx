@@ -142,7 +142,8 @@ export default function ToolkitPage() {
       const { mergePdfs } = await import("@/lib/pdf-operations");
       const merged = await mergePdfs(newFiles.map((f) => f.bytes));
       setMergedBytes(merged);
-      const thumbs = await renderAllPages(merged, 160, 4);
+      // Keep editable bytes after PDF.js transfers its thumbnail input to the worker.
+      const thumbs = await renderAllPages(merged.slice(), 160, 4);
       setPages(thumbs);
       setOrder(thumbs.map((t) => t.pageIndex));
     } catch {
