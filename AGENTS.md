@@ -23,3 +23,8 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 - Next16.4.3/React19.2.9; track package-lock.json. Preserve PDF bytes at split/toolkit thumbnail call sites because the worker transfers its input.
 - Build/types and real synthetic PDF merge/extract/90-degree rotation passed; mobile shell has no overflow. Concurrent renderer pilot commits b88c025/e7d341d preserved.
 - Verify with the existing build plus runtime checks before rollout. Full report: `C:/Users/User/ai-vulnerability-manager/docs/WEB-RSC-REMEDIATION-20261031.md`. Local repair only; no production deployment/push or automatic vulnerability closure.
+
+### 2026-10-31 — Verified GPT renderer pilot
+
+- Canonical before/after harness8fail/1pass ->9pass; isolated Next build/types and both local synthetic-PDF browser routes pass with same-origin worker200, no external requests/errors. DevOps-Scanner suite260pass.
+- Evidence pins e7d341d; later independent runtime/caller remediation7c2409d is separate. Full evidence index is C:/Users/User/DevOps-Scanner/docs/typescript-security-workflow.md. No production deployment.

@@ -10,14 +10,21 @@
 - Preserve pre-existing/unrelated edits and evidence; do not broadly reset dependencies or content.
 
 
-## Current state
-- Branch security/gpt-typescript-pilot; baseline f9871b07eb47d61f37e9c20ed4045a1600fcd553, harness b88c025. Source-fix commit is the commit containing this entry.
-- User authorized a real Next.js TypeScript scan/fix/retest pilot, orchestrated by GPT. No deployment or production branch push. Existing .env files untouched; synthetic fixtures only.
+## GPT TypeScript renderer workflow completed - 2026-10-31 HKT
 
-## Completed and verification
-- Actual isolated ESLint/TypeScript security scan covers renderer and five callers/helpers. Zero scanner signals; GPT independently identified eager-render scheduling and conditional CDN worker trust concerns.
-- First offline harness reproduces three failures (worker origin and two concurrency limits). Fixed renderer passes nine tests including five invalid-limit cases and normal page order/dimensions.
-- Worker now resolves bundled same-origin asset; render work created per batch, not eagerly for every page.
-
-## Next step
-- Run final committed-source before/after harness, isolated Next build and local browser checks; rescan/GPT review and retain exact execution evidence in DevOps-Scanner. Complete final handoff after verification.
+- Branch security/gpt-typescript-pilot. Renderer fix e7d341dc74f503bf12522be39a87a824fb6e2170;
+  baseline f9871b07eb47d61f37e9c20ed4045a1600fcd553. Subsequent independent runtime/caller repair
+  7c2409d is documented above; GPT pilot evidence deliberately pins e7d341d, not the later combined tree.
+- Actual isolated ESLint scanned six TS/TSX files before/after with zero signals. GPT independently
+  identified eager rendering and conditional runtime CDN worker trust, corrected in e7d341d.
+- Same committed nine-test harness: baseline8fail/1pass, fixed9pass. Next --webpack build/typecheck
+  passed from clean source export; observed installed runtime16.4.3 with captured lock. No .env copied.
+- Local Chromium Split/Toolkit rendered two synthetic pages each, bundled same-origin worker200,
+  zero external requests/page errors; desktop/mobile proofs retained. Local server stopped.
+- DevOps-Scanner implementation97d1f42; full suite260pass. Final comparison
+  fdfdbdeda2b14382a5a31494b693ac9a and both actual GPT reports verified advisory only.
+- Guide/evidence: C:/Users/User/DevOps-Scanner/docs/typescript-security-workflow.md and
+  assessments/typescript-security-pilot-20261031.json. User skill supports TS scan and this named retest.
+- No production deployment/main push. Keep independent runtime remediation above distinct from this
+  scoped proof. Remaining renderer limits: total thumbnail retention/document lifetime unchanged;
+  installed dependencies remain trusted. Next work follows authorized project maintenance/deployment.
