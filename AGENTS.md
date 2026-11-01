@@ -58,3 +58,10 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 - Canonical before/after harness8fail/1pass ->9pass; isolated Next build/types and both local synthetic-PDF browser routes pass with same-origin worker200, no external requests/errors. DevOps-Scanner suite260pass.
 - Evidence pins e7d341d; later independent runtime/caller remediation7c2409d is separate. Full evidence index is C:/Users/User/DevOps-Scanner/docs/typescript-security-workflow.md. No production deployment.
+
+
+### 2026-11-01 — Event-gated GPT renderer correction
+
+- Applied the source-reviewed renderer correction from input `0639e6af2520202f158aa5627ecf66714865659b` in this commit.
+- Read-only GPT supplied source-bound findings and replacement source; the trusted dispatcher alone writes, tests and guarded-pushes.
+- The fixed harness and final scanner/GPT results are recorded on PR #1 and in DevOps-Scanner evidence/pr-dispatch. Final verification/publication follows this local commit; no merge or deploy.

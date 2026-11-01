@@ -56,3 +56,10 @@
 - No production deployment/main push. Keep independent runtime remediation above distinct from this
   scoped proof. Remaining renderer limits: total thumbnail retention/document lifetime unchanged;
   installed dependencies remain trusted. Next work follows authorized project maintenance/deployment.
+
+
+### 2026-11-01 — Event-gated GPT renderer correction
+
+- Applied the source-reviewed renderer correction from input `0639e6af2520202f158aa5627ecf66714865659b` in this commit.
+- Read-only GPT supplied source-bound findings and replacement source; the trusted dispatcher alone writes, tests and guarded-pushes.
+- The fixed harness and final scanner/GPT results are recorded on PR #1 and in DevOps-Scanner evidence/pr-dispatch. Final verification/publication follows this local commit; no merge or deploy.

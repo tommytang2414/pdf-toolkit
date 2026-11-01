@@ -11,6 +11,16 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
+async function loadPdfDocument(pdf: Uint8Array) {
+  const loadingTask = pdfjsLib.getDocument({ data: pdf });
+  try {
+    return await loadingTask.promise;
+  } catch (error) {
+    await loadingTask.destroy();
+    throw error;
+  }
+}
+
 export interface PageRender {
   /** 0-indexed page number */
   pageIndex: number;
@@ -26,7 +36,7 @@ export interface PageRender {
  * Get the number of pages in a PDF without rendering anything.
  */
 export async function getPageCount(pdf: Uint8Array): Promise<number> {
-  const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
+  const doc = await loadPdfDocument(pdf);
   try {
     return doc.numPages;
   } finally {
@@ -43,7 +53,7 @@ export async function renderPage(
   pageIndex: number,
   maxPx = 200
 ): Promise<PageRender> {
-  const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
+  const doc = await loadPdfDocument(pdf);
   try {
     const page = await doc.getPage(pageIndex + 1); // pdfjs is 1-indexed
 
@@ -84,7 +94,7 @@ export async function renderAllPages(
   if (!Number.isInteger(concurrency) || concurrency < 1) {
     throw new RangeError("concurrency must be a positive integer");
   }
-  const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
+  const doc = await loadPdfDocument(pdf);
   try {
     const numPages = doc.numPages;
 
