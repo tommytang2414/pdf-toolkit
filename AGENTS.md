@@ -9,6 +9,12 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-01 — Unattended repair acceptance harness
+
+- Extend the trusted renderer harness to 19 cases: rejected PDF loading must await loading-task cleanup in all three helpers, and missing Canvas contexts must reject and release documents in both render paths.
+- On unchanged renderer 2157cc5, preparation reproduces exactly three loading-task cleanup failures (16 pass/3 fail). Installed PDF.js 4.10.38 also retains task/worker/transport after a synthetic invalid PDF rejects until explicit task destruction; the Node probe is not a browser heap measurement.
+- This commit changes tests/documentation only. The scheduled GPT workflow must independently review, perform a justified renderer-only repair, use the engine-pinned harness, guarded-push, rescan/review/retest and publish. No merge/deploy; retain deployment suppression.
+
 ### 2026-11-01 — Explicit canvas allocation failure
 
 - Both rendering helpers reject a missing Canvas 2D context with an explicit error, before invoking PDF.js render. Existing finally cleanup still releases the acquired document.

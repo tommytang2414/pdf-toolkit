@@ -11,12 +11,19 @@ const output = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
 }).outputText;
 
-async function renderer(count = 20, failPage = false) {
-  const state = { started: 0, active: 0, peak: 0, destroyed: 0, pending: [] };
+async function renderer(count = 20, failPage = false, { failLoad = false, nullContext = false } = {}) {
+  const state = { started: 0, active: 0, peak: 0, destroyed: 0, pending: [], cleanupFinished: false };
+  const loadError = new Error('synthetic invalid PDF');
+  const destroy = async () => {
+    state.destroyed++;
+    await new Promise(resolve => setImmediate(resolve));
+    state.cleanupFinished = true;
+  };
   const options = {};
   const doc = {
     numPages: count,
-    destroy: async () => { state.destroyed++; },
+    // PDFDocumentProxy.destroy delegates to its loadingTask.destroy in installed PDF.js.
+    destroy,
     getPage: async (index) => {
       if (failPage) throw new Error('synthetic page failure');
       state.started++;
@@ -33,11 +40,13 @@ async function renderer(count = 20, failPage = false) {
     },
   };
   const context = vm.createContext({ URL, document: { createElement: () => ({
-    getContext: () => ({}), toDataURL: () => 'data:image/jpeg;base64,fixture',
+    getContext: () => nullContext ? null : ({}), toDataURL: () => 'data:image/jpeg;base64,fixture',
   }) } });
   const dependency = new vm.SyntheticModule(['GlobalWorkerOptions', 'getDocument'], function () {
     this.setExport('GlobalWorkerOptions', options);
-    this.setExport('getDocument', () => ({ promise: Promise.resolve(doc) }));
+    this.setExport('getDocument', () => ({
+      promise: failLoad ? Promise.reject(loadError) : Promise.resolve(doc), destroy,
+    }));
   }, { context });
   const module = new vm.SourceTextModule(output, { context,
     initializeImportMeta: meta => { meta.url = 'https://pdf-toolkit.test/assets/renderer.mjs'; } });
@@ -46,7 +55,7 @@ async function renderer(count = 20, failPage = false) {
     return dependency;
   });
   await module.evaluate();
-  return { api: module.namespace, state, options };
+  return { api: module.namespace, state, options, loadError };
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -114,5 +123,31 @@ for (const method of ['renderPage', 'renderAllPages']) {
     const { api, state } = await renderer(1, true);
     await assert.rejects(api[method](new Uint8Array(), ...(method === 'renderPage' ? [0] : [])), /synthetic page failure/);
     assert.equal(state.destroyed, 1);
+  });
+}
+
+for (const method of ['getPageCount', 'renderPage', 'renderAllPages']) {
+  test(`${method} awaits loading-task cleanup when PDF loading rejects`, async () => {
+    const { api, state, loadError } = await renderer(1, false, { failLoad: true });
+    await assert.rejects(
+      api[method](new Uint8Array(), ...(method === 'renderPage' ? [0] : [])),
+      error => error === loadError,
+    );
+    assert.equal(state.started, 0, 'failed loading must not schedule page work');
+    assert.equal(state.destroyed, 1, 'failed loading task must be destroyed exactly once');
+    assert.equal(state.cleanupFinished, true, 'caller must observe completed cleanup');
+  });
+}
+
+for (const method of ['renderPage', 'renderAllPages']) {
+  test(`${method} rejects missing canvas context and releases the document`, async () => {
+    const { api, state } = await renderer(1, false, { nullContext: true });
+    await assert.rejects(
+      api[method](new Uint8Array(), ...(method === 'renderPage' ? [0] : [])),
+      /Could not create a 2D rendering context/,
+    );
+    assert.equal(state.active, 0, 'PDF.js render must not start without a canvas context');
+    assert.equal(state.destroyed, 1);
+    assert.equal(state.cleanupFinished, true);
   });
 }
