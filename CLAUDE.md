@@ -12,7 +12,7 @@ Browser-based PDF manipulation — merge, split, rotate, reorder, delete. 100% c
 
 ## Renderer security workflow
 
-Current toolkit acceptance: `node tests/toolkit-lifecycle.cjs`. Async operations and dropzone parsing use generation refs; Reset changes the dropzone key, and stale callbacks must not create URLs or change loading/error state. Keep earlier `toolkit-composition.cjs` / `toolkit-existing-rotation.cjs` frozen for old snapshots; their extraction host predates generation refs. Browser QA lives in AI Vulnerability Manager `scripts/closure_browser.cjs` and uses synthetic PDFs only.
+Current toolkit acceptance: run `node tests/toolkit-lifecycle.cjs`, `node tests/toolkit-edit-errors.cjs` and `node tests/toolkit-selection-boundary.cjs`. Async operations and dropzone parsing use generation refs; the optional selection-start callback invalidates parent work before validation, and mounted-state guards reject late native file callbacks. Reset remounts the dropzone and stays available during parsing. Edits clear superseded errors; current load errors display without pages. Keep earlier `toolkit-composition.cjs` / `toolkit-existing-rotation.cjs` frozen for old snapshots; their extraction host predates generation refs. Browser QA lives in AI Vulnerability Manager `scripts/closure_browser.cjs` and uses synthetic PDFs only.
 
 `lib/pdf-renderer.ts` bundles its PDF.js worker with `new URL(..., import.meta.url)` and schedules page work in bounded batches. Run committed-source regressions through DevOps-Scanner retest-pdf-toolkit; use synthetic PDFs for browser checks. The helper retains all thumbnail results and trusts installed PDF.js; this is not complete document-memory isolation.
 
