@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -83,11 +83,16 @@ function SortablePage({
           border: "1px solid var(--border)",
           boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
           background: "#111116",
-          transform: `rotate(${rotationDeg}deg)`,
-          transition: "transform 0.3s ease",
           position: "relative",
         }}>
-          <img src={thumb.dataUrl} alt={`Page ${thumb.pageIndex + 1}`} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block", pointerEvents: "none" }} />
+          <img src={thumb.dataUrl} alt={`Page ${thumb.pageIndex + 1}`} style={{
+            width: rotationDeg % 180 ? 160 : 120,
+            height: rotationDeg % 180 ? 120 : 160,
+            position: "absolute", left: "50%", top: "50%",
+            transform: `translate(-50%, -50%) rotate(${rotationDeg}deg)`,
+            transition: "transform 0.3s ease",
+            objectFit: "contain", display: "block", pointerEvents: "none",
+          }} />
           {/* Drag dots */}
           <div style={{ position: "absolute", top: 5, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 2, opacity: 0.3 }}>
             {[0,1,2].map(i => <div key={i} style={{ width: 4, height: 4, borderRadius: 999, background: "#fff" }} />)}
@@ -121,7 +126,21 @@ export default function ToolkitPage() {
   const [error, setError] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [mergedBytes, setMergedBytes] = useState<Uint8Array | null>(null);
+  const [dropzoneKey, setDropzoneKey] = useState(0);
   const { create: createUrl, revoke: revokeUrl } = useBlobUrl();
+  const operationId = useRef(0);
+
+  useEffect(() => () => {
+    operationId.current++;
+    revokeUrl();
+  }, [revokeUrl]);
+
+  const invalidateResult = () => {
+    operationId.current++;
+    setResultUrl(null);
+    revokeUrl();
+    setLoading(false);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -129,31 +148,38 @@ export default function ToolkitPage() {
   );
 
   const reset = useCallback(() => {
+    operationId.current++;
+    setDropzoneKey((key) => key + 1);
     setFiles([]); setPages([]); setOrder([]); setRotations(new Map());
     setResultUrl(null); setError(null); setMergedBytes(null);
     revokeUrl();
+    setLoading(false);
   }, [revokeUrl]);
 
   const handleFiles = useCallback(async (newFiles: PdfFile[]) => {
+    const generation = ++operationId.current;
     setFiles(newFiles); setPages([]); setOrder([]); setRotations(new Map());
     setResultUrl(null); setError(null); setMergedBytes(null); revokeUrl();
     setLoading(true);
     try {
       const { mergePdfs } = await import("@/lib/pdf-operations");
       const merged = await mergePdfs(newFiles.map((f) => f.bytes));
+      if (generation !== operationId.current) return;
       setMergedBytes(merged);
       // Keep editable bytes after PDF.js transfers its thumbnail input to the worker.
       const thumbs = await renderAllPages(merged.slice(), 160, 4);
+      if (generation !== operationId.current) return;
       setPages(thumbs);
       setOrder(thumbs.map((t) => t.pageIndex));
     } catch {
-      setError("Failed to load PDFs.");
+      if (generation === operationId.current) setError("Failed to load PDFs.");
     } finally {
-      setLoading(false);
+      if (generation === operationId.current) setLoading(false);
     }
   }, [revokeUrl]);
 
   const handleRotateCW = (pageIndex: number) => {
+    invalidateResult();
     setRotations((prev) => {
       const next = new Map(prev);
       next.set(pageIndex, ((next.get(pageIndex) ?? 0) + 90) % 360);
@@ -162,6 +188,7 @@ export default function ToolkitPage() {
   };
 
   const handleRotateCCW = (pageIndex: number) => {
+    invalidateResult();
     setRotations((prev) => {
       const next = new Map(prev);
       const cur = (next.get(pageIndex) ?? 0);
@@ -170,11 +197,15 @@ export default function ToolkitPage() {
     });
   };
 
-  const handleDelete = (pageIndex: number) => setOrder((prev) => prev.filter((i) => i !== pageIndex));
+  const handleDelete = (pageIndex: number) => {
+    invalidateResult();
+    setOrder((prev) => prev.filter((i) => i !== pageIndex));
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+    invalidateResult();
     setOrder((prev) => {
       const oldIdx = prev.indexOf(active.id as number);
       const newIdx = prev.indexOf(over.id as number);
@@ -184,6 +215,9 @@ export default function ToolkitPage() {
 
   const handleDownload = async () => {
     if (!mergedBytes) return;
+    const generation = ++operationId.current;
+    setResultUrl(null);
+    revokeUrl();
     setLoading(true);
     setError(null);
     try {
@@ -192,6 +226,7 @@ export default function ToolkitPage() {
       const deletedOriginal = new Set(pages.map((p) => p.pageIndex).filter((idx) => !order.includes(idx)));
       if (deletedOriginal.size > 0) {
         bytes = await deletePages(bytes, Array.from(deletedOriginal));
+        if (generation !== operationId.current) return;
       }
 
       const surviving = pages.map((p) => p.pageIndex).filter((idx) => !deletedOriginal.has(idx));
@@ -200,6 +235,7 @@ export default function ToolkitPage() {
       const newOrder = order.map((orig) => origToNew.get(orig)).filter((n): n is number => n !== undefined);
 
       if (newOrder.length > 0) bytes = await reorderPages(bytes, newOrder);
+      if (generation !== operationId.current) return;
 
       const rotMap = new Map<number, Rotation>();
       // Rotations refer to original pages; output positions follow the final order.
@@ -208,13 +244,14 @@ export default function ToolkitPage() {
         if (deg !== undefined && deg !== 0) rotMap.set(outputIdx, deg as Rotation);
       });
       if (rotMap.size > 0) bytes = await rotatePages(bytes, rotMap, "relative");
+      if (generation !== operationId.current) return;
 
       const url = createUrl(bytes);
       setResultUrl(url);
     } catch {
-      setError("Failed to process PDF.");
+      if (generation === operationId.current) setError("Failed to process PDF.");
     } finally {
-      setLoading(false);
+      if (generation === operationId.current) setLoading(false);
     }
   };
 
@@ -235,7 +272,7 @@ export default function ToolkitPage() {
         )}
       </div>
 
-      <PdfDropzone multiple onFiles={handleFiles} />
+      <PdfDropzone key={dropzoneKey} multiple onFiles={handleFiles} />
 
       {loading && files.length > 0 && pages.length === 0 && (
         <div style={{ marginTop: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 14 }}>Loading & rendering pages...</div>

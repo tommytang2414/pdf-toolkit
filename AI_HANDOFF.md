@@ -1,5 +1,11 @@
 # AI Handoff
 
+## Autonomous lifecycle closure — 2026-11-06 HKT
+
+- Entry `b18d55b`, clean `security/gpt-typescript-pilot`; owner authorized autonomous evidence-led completion. Actual callback regressions reproduce stale load/download/reset/edit/unmount completions and cross-component selection races; generation guards and Reset remount fix them (5/13 to13/13).
+- Malformed PDF parsing is handled. Preview rotation stays inside a fixed frame. Fresh webpack build/types passed; real local browser verifies latest-file selection, reorder/existing-angle/deletion downloads and reset while parsing. Final receipts/review follow in `C:/Users/User/ai-vulnerability-manager/workspaces/closure-20261106`; central report will hold exact final outcome.
+- No renderer-source modification, merge or deployment. Previous source/receipts remain immutable; historical extraction tests are not the new acceptance host. Current test `node tests/toolkit-lifecycle.cjs`; final source-bound advisory review and evidence verification are the remaining delivery step in this task.
+
 ## Toolkit composition repair — 2026-11-06 HKT
 
 - Entry `0d083b2` on `security/gpt-typescript-pilot`, clean before this task. Owner authorized local download composition repair and shadow pilot; no merge or deployment. Preserve the independent renderer workflow below.

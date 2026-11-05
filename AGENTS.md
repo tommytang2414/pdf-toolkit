@@ -9,6 +9,13 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-06 — Close asynchronous selection and download races
+
+- Tag operations and selections with generations; stale results/errors/loading completions cannot publish after another load, edit, Reset or unmount. Reset remounts the dropzone to invalidate pending file parsing; malformed PDFs report a handled error.
+- Keep rotated previews inside fixed page columns so labels/controls stay upright and adjacent previews do not overlap.
+- Current acceptance entrypoint: `node tests/toolkit-lifecycle.cjs` (actual TSX under controlled hooks/promises plus real PDF operations). Baseline 5/13 to 13/13. Prior extraction harnesses remain byte-frozen for historical source snapshots and are not the current callback test host.
+- Local production-build browser QA covers rapid selections, Reset during parsing, reorder/rotation/deletion downloads, malformed-file recovery and mobile bounds. No production rollout; preserve the independent renderer workflow and deployment suppression.
+
 ### 2026-11-06 — Preserve rotation targets after page reordering
 
 - Owner-authorized local fix maps original rotation IDs to final download order, covering deletion and reorder composition. Renderer source and its independent scheduled repair remain untouched.

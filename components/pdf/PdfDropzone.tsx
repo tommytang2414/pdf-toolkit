@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 
 interface PdfFile {
@@ -21,9 +21,12 @@ const HARD_LIMIT = 100 * 1024 * 1024; // 100 MB — block
 export default function PdfDropzone({ onFiles, multiple = true }: Props) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const selectionId = useRef(0);
+  useEffect(() => () => { selectionId.current++; }, []);
 
   const processFiles = useCallback(
     async (raw: FileList | File[]) => {
+      const selection = ++selectionId.current;
       setError(null);
       const files = Array.from(raw).filter((f) => f.type === "application/pdf");
 
@@ -49,14 +52,19 @@ export default function PdfDropzone({ onFiles, multiple = true }: Props) {
       }
 
       const results: PdfFile[] = [];
-      for (const file of files) {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const { PDFDocument } = await import("pdf-lib");
-        const doc = await PDFDocument.load(bytes);
-        results.push({ file, bytes, name: file.name, pageCount: doc.getPageCount() });
+      try {
+        for (const file of files) {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          if (selection !== selectionId.current) return;
+          const { PDFDocument } = await import("pdf-lib");
+          const doc = await PDFDocument.load(bytes);
+          if (selection !== selectionId.current) return;
+          results.push({ file, bytes, name: file.name, pageCount: doc.getPageCount() });
+        }
+        if (selection === selectionId.current) onFiles(results);
+      } catch {
+        if (selection === selectionId.current) setError("Failed to read PDF files. Please choose valid PDFs.");
       }
-
-      onFiles(results);
     },
     [multiple, onFiles]
   );
