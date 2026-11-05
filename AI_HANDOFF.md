@@ -4,9 +4,11 @@
 
 - Entry `0d083b2` on `security/gpt-typescript-pilot`, clean before this task. Owner authorized local download composition repair and shadow pilot; no merge or deployment. Preserve the independent renderer workflow below.
 - Map rotation IDs to final output positions after deletion/reordering. Added `tests/toolkit-composition.cjs` using actual handler source and real pdf-lib: baseline 2/5, repaired 5/5. Baseline/fixed raw evidence: `C:/Users/User/ai-vulnerability-manager/workspaces/repair-pilot-20261106/`.
-- Renderer source and its trusted harness are unchanged. Pilot/report and final validation will be recorded by the same task before delivery. Git HEAD is authoritative; this entry is included in the source-fix commit.
+- This task leaves renderer source and its trusted harness unchanged. Git HEAD is authoritative; independent renderer commits below are preserved.
 - Composition source fix `23379af` pushed with Git deployment suppressed. The independent renderer workflow completed as `e52766a` before that commit; preserved unchanged.
 - During the frozen shadow comparison, combined review identified source-page rotation overwrite. Actual preview intent confirmed (PDF.js viewport plus CSS adjustment), and six synthetic actual-handler tests reproduce 1/6 before versus 6/6 after a separate relative-rotation fix. Original five composition checks still pass. Helper absolute default retained. This extra fix is not backfilled into the `23379af` experiment; final source review follows separately.
+- Final source `7ee0ae9`: both regression suites pass (5 + 6 checks); fresh webpack production build/types pass. Separate source-bound combined review is valid/complete but remains advisory BLOCKED on an unverified overlapping file-load/download stale-result concern. Do not claim this race reproduced or automatically repair without a trusted regression. No merge/deploy.
+- Completed report and model evidence: `C:/Users/User/ai-vulnerability-manager/docs/REPAIR-PILOT-20261106.md`, `workspaces/repair-pilot-20261106/`. Exact next step: retain local fixes and verify the new concurrency concern with controlled deferred operations before further source changes or production rollout. Existing security-branch detector may independently review pushed heads; its receipts are separate.
 
 ## Resource-budget unattended acceptance preparation — 2026-11-05 HKT
 
