@@ -79,3 +79,10 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 - The scheduled resource correction was held before push because five immutable legacy tests require `positive integer` in invalid-concurrency errors. Keep that phrase while adding the upper bound; all42 tests remain unchanged.
 - Failed local proposal53e1154 is retained on recovery/resource-test-failed-53e1154 and in engine evidence; it was not pushed. This new preparation changes documentation only and restores the unchanged input renderer. A fresh scheduled GPT review/repair must satisfy the entire fixed harness.
 - No merge/deploy, test relaxation, token refund or automatic retry. Engine records explicit operator reconciliation and preserves both earlier failures before enabling this new documented head.
+
+
+### 2026-11-06 — Event-gated GPT renderer correction
+
+- Applied the source-reviewed renderer correction from input `0d083b28e5ec11a54368119902372ed32cda9d6b` in this commit.
+- Read-only GPT supplied source-bound findings and replacement source; the trusted dispatcher alone writes, tests and guarded-pushes.
+- The fixed harness and final scanner/GPT results are recorded on PR #1 and in DevOps-Scanner evidence/pr-dispatch. Final verification/publication follows this local commit; no merge or deploy.
