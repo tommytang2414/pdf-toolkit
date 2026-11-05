@@ -207,7 +207,7 @@ export default function ToolkitPage() {
         const deg = rotations.get(origIdx);
         if (deg !== undefined && deg !== 0) rotMap.set(outputIdx, deg as Rotation);
       });
-      if (rotMap.size > 0) bytes = await rotatePages(bytes, rotMap);
+      if (rotMap.size > 0) bytes = await rotatePages(bytes, rotMap, "relative");
 
       const url = createUrl(bytes);
       setResultUrl(url);

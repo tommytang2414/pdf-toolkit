@@ -13,6 +13,7 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 - Owner-authorized local fix maps original rotation IDs to final download order, covering deletion and reorder composition. Renderer source and its independent scheduled repair remain untouched.
 - `node tests/toolkit-composition.cjs` executes the actual handler with real pdf-lib and synthetic PDFs: unchanged source 2/5 pass, repaired source 5/5. No user PDF or production deployment involved.
+- The shadow follow-up additionally reproduced an existing-rotation mismatch: PDF.js thumbnails preserve source rotation while CSS adds the UI adjustment. Toolkit now requests relative rotation; helper default remains absolute for its other caller. `node tests/toolkit-existing-rotation.cjs` covers original positive/negative angles, wrap, zero adjustment and deletion/reorder: 1/6 before, 6/6 after.
 
 ### 2026-11-05 — Trusted thumbnail resource regression preparation
 

@@ -31,6 +31,8 @@ All `pdf-lib` calls use 0-based indices. User-facing display (in badges/labels) 
 ### Rotation + Deletion Index Mapping
 The toolkit download handler deletes, then reorders, then rotates. Rotation state uses original page IDs, so map each surviving original ID to its final `order` position, not merely its post-deletion index. Run `node tests/toolkit-composition.cjs` for actual-handler synthetic PDF regression checks. `applyAllOperations` is a separate unused helper and is not the toolkit caller.
 
+Toolkit rotation controls are relative to the already-oriented thumbnail, so the handler passes `"relative"` to `rotatePages`. The helper defaults to absolute rotation for existing callers. Run `node tests/toolkit-existing-rotation.cjs` for source-page rotation preservation; its wrapper changes only synthetic input initialization in the composition harness.
+
 ---
 
 ## Gotchas
