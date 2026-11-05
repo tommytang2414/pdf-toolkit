@@ -138,6 +138,7 @@ export default function ToolkitPage() {
   const invalidateResult = () => {
     operationId.current++;
     setResultUrl(null);
+    setError(null);
     revokeUrl();
     setLoading(false);
   };

@@ -9,6 +9,11 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-06 — Clear processing errors when editing
+
+- Final source review found that rotate/delete/reorder left an already-visible download error attached to superseded inputs. Clear the error in the shared edit invalidation path.
+- `node tests/toolkit-edit-errors.cjs` reproduces all four edit paths (0/4 before, 4/4 after), using the frozen lifecycle host. Keep both harnesses; the prior review and BLOCKED finding remain immutable central evidence.
+
 ### 2026-11-06 — Close asynchronous selection and download races
 
 - Tag operations and selections with generations; stale results/errors/loading completions cannot publish after another load, edit, Reset or unmount. Reset remounts the dropzone to invalidate pending file parsing; malformed PDFs report a handled error.
