@@ -12,21 +12,28 @@ interface PdfFile {
 
 interface Props {
   onFiles(files: PdfFile[]): void;
+  onSelectionStart?(): void;
   multiple?: boolean;
 }
 
 const SOFT_LIMIT = 50 * 1024 * 1024; // 50 MB — warn only
 const HARD_LIMIT = 100 * 1024 * 1024; // 100 MB — block
 
-export default function PdfDropzone({ onFiles, multiple = true }: Props) {
+export default function PdfDropzone({ onFiles, onSelectionStart, multiple = true }: Props) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectionId = useRef(0);
-  useEffect(() => () => { selectionId.current++; }, []);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; selectionId.current++; };
+  }, []);
 
   const processFiles = useCallback(
     async (raw: FileList | File[]) => {
+      if (!mounted.current) return;
       const selection = ++selectionId.current;
+      onSelectionStart?.();
       setError(null);
       const files = Array.from(raw).filter((f) => f.type === "application/pdf");
 
@@ -66,7 +73,7 @@ export default function PdfDropzone({ onFiles, multiple = true }: Props) {
         if (selection === selectionId.current) setError("Failed to read PDF files. Please choose valid PDFs.");
       }
     },
-    [multiple, onFiles]
+    [multiple, onFiles, onSelectionStart]
   );
 
   return (

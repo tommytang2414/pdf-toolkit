@@ -9,6 +9,12 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-06 — Invalidate parent work at selection start
+
+- Dropzone notifies Toolkit synchronously before validation or parsing so even a rejected replacement invalidates earlier parent work. Other Dropzone callers can omit the callback. Unmounted native file-input callbacks are ignored; effect setup remains StrictMode-safe.
+- Keep Reset available while parsing and show current load errors even when no pages exist. `node tests/toolkit-selection-boundary.cjs` executes both actual components across controlled merge/render/rejection boundaries and a captured native input callback: 0/12 before, 12/12 after.
+- Run all three current toolkit harnesses; preserve their earlier versions and immutable central review findings. No renderer, authentication or deployment change.
+
 ### 2026-11-06 — Clear processing errors when editing
 
 - Final source review found that rotate/delete/reorder left an already-visible download error attached to superseded inputs. Clear the error in the shared edit invalidation path.

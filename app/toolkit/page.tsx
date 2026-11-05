@@ -179,6 +179,14 @@ export default function ToolkitPage() {
     }
   }, [revokeUrl]);
 
+  const handleSelectionStart = useCallback(() => {
+    operationId.current++;
+    setFiles([]); setPages([]); setOrder([]); setRotations(new Map());
+    setResultUrl(null); setError(null); setMergedBytes(null);
+    revokeUrl();
+    setLoading(false);
+  }, [revokeUrl]);
+
   const handleRotateCW = (pageIndex: number) => {
     invalidateResult();
     setRotations((prev) => {
@@ -268,12 +276,10 @@ export default function ToolkitPage() {
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>PDF Toolkit</h1>
           <p style={{ fontSize: 13, color: "var(--text-muted)", margin: "4px 0 0" }}>Drag to reorder · Rotate CW/CCW · Delete · Download when ready</p>
         </div>
-        {pages.length > 0 && (
-          <button onClick={reset} className="btn-secondary" style={{ padding: "6px 14px", fontSize: 13 }}>Reset</button>
-        )}
+        <button onClick={reset} className="btn-secondary" style={{ padding: "6px 14px", fontSize: 13 }}>Reset</button>
       </div>
 
-      <PdfDropzone key={dropzoneKey} multiple onFiles={handleFiles} />
+      <PdfDropzone key={dropzoneKey} multiple onFiles={handleFiles} onSelectionStart={handleSelectionStart} />
 
       {loading && files.length > 0 && pages.length === 0 && (
         <div style={{ marginTop: 24, textAlign: "center", color: "var(--text-muted)", fontSize: 14 }}>Loading & rendering pages...</div>
@@ -311,10 +317,9 @@ export default function ToolkitPage() {
             {loading ? "Processing..." : `Download ${order.length} pages`}
             <Download size={17} />
           </button>
-
-          {error && <p className="error-text" style={{ marginTop: 12, textAlign: "center" }}>{error}</p>}
         </div>
       )}
+      {error && <p className="error-text" style={{ marginTop: 12, textAlign: "center" }}>{error}</p>}
 
       {resultUrl && (
         <div className="result-banner" style={{ marginTop: 28 }}>
