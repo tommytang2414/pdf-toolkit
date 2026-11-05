@@ -9,6 +9,11 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-06 — Preserve rotation targets after page reordering
+
+- Owner-authorized local fix maps original rotation IDs to final download order, covering deletion and reorder composition. Renderer source and its independent scheduled repair remain untouched.
+- `node tests/toolkit-composition.cjs` executes the actual handler with real pdf-lib and synthetic PDFs: unchanged source 2/5 pass, repaired source 5/5. No user PDF or production deployment involved.
+
 ### 2026-11-05 — Trusted thumbnail resource regression preparation
 
 - Owner-authorized renderer budget: at most200 pages per thumbnail batch,512px,4 concurrent operations and16MiB total data-URL characters. Reject over-limit batches without partial results; release page/canvas resources after success or failure and settle sibling work before document destruction.

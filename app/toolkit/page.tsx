@@ -202,12 +202,10 @@ export default function ToolkitPage() {
       if (newOrder.length > 0) bytes = await reorderPages(bytes, newOrder);
 
       const rotMap = new Map<number, Rotation>();
-      rotations.forEach((deg, origIdx) => {
-        if (!deletedOriginal.has(origIdx) && deg !== 0) {
-          let shift = 0;
-          deletedOriginal.forEach((d) => { if (d < origIdx) shift++; });
-          rotMap.set(origIdx - shift, deg as Rotation);
-        }
+      // Rotations refer to original pages; output positions follow the final order.
+      order.forEach((origIdx, outputIdx) => {
+        const deg = rotations.get(origIdx);
+        if (deg !== undefined && deg !== 0) rotMap.set(outputIdx, deg as Rotation);
       });
       if (rotMap.size > 0) bytes = await rotatePages(bytes, rotMap);
 

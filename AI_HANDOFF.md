@@ -1,5 +1,11 @@
 # AI Handoff
 
+## Toolkit composition repair — 2026-11-06 HKT
+
+- Entry `0d083b2` on `security/gpt-typescript-pilot`, clean before this task. Owner authorized local download composition repair and shadow pilot; no merge or deployment. Preserve the independent renderer workflow below.
+- Map rotation IDs to final output positions after deletion/reordering. Added `tests/toolkit-composition.cjs` using actual handler source and real pdf-lib: baseline 2/5, repaired 5/5. Baseline/fixed raw evidence: `C:/Users/User/ai-vulnerability-manager/workspaces/repair-pilot-20261106/`.
+- Renderer source and its trusted harness are unchanged. Pilot/report and final validation will be recorded by the same task before delivery. Git HEAD is authoritative; this entry is included in the source-fix commit.
+
 ## Resource-budget unattended acceptance preparation — 2026-11-05 HKT
 
 - Branch security/gpt-typescript-pilot, entry07f9dc36e7b92e5166bb7998738f4d99d498dcc3. Test commit c047e45 plus this documentation commit leave renderer bytes unchanged.

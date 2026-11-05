@@ -29,7 +29,7 @@ Toolkit supports both clockwise AND counter-clockwise rotation (90° increments)
 All `pdf-lib` calls use 0-based indices. User-facing display (in badges/labels) shows 1-based. Conversion happens at the UI layer only.
 
 ### Rotation + Deletion Index Mapping
-When pages are deleted before rotation is applied, the rotation target index shifts. The toolkit handles this by computing `originalToNewIdx` before applying rotation — deleting first changes the document structure, so rotation targets must map to post-deletion indices.
+The toolkit download handler deletes, then reorders, then rotates. Rotation state uses original page IDs, so map each surviving original ID to its final `order` position, not merely its post-deletion index. Run `node tests/toolkit-composition.cjs` for actual-handler synthetic PDF regression checks. `applyAllOperations` is a separate unused helper and is not the toolkit caller.
 
 ---
 
