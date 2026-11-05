@@ -9,6 +9,13 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-05 — Trusted thumbnail resource regression preparation
+
+- Owner-authorized renderer budget: at most200 pages per thumbnail batch,512px,4 concurrent operations and16MiB total data-URL characters. Reject over-limit batches without partial results; release page/canvas resources after success or failure and settle sibling work before document destruction.
+- Tests cover limits, preserved order/dimensions, loading admission, output boundary, repeated cleanup and failing siblings. Test commit c047e45 changes no application source: unchanged07f9dc3 renderer gives17pass/25fail in42cases, no skipped/cancelled. DevOps-Scanner pins the exact reviewed preparation commit.
+- Actual PDF.js/native-canvas probe: a2,973-byte201-page PDF produces201 thumbnails on the current renderer, with201 nonzero canvases at completion. This is bounded Node reproduction, not browser OOM proof. Pre-merge/parser/complex-page resource risks remain outside the renderer-only correction.
+- Old GPT heartbeat is PAUSED. Only deterministic metadata detection may start the GPT worker; no merge, approval or deployment.
+
 ### 2026-11-01 — Unattended repair acceptance harness
 
 - Extend the trusted renderer harness to 19 cases: rejected PDF loading must await loading-task cleanup in all three helpers, and missing Canvas contexts must reject and release documents in both render paths.

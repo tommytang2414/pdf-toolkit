@@ -1,5 +1,14 @@
 # AI Handoff
 
+## Resource-budget unattended acceptance preparation — 2026-11-05 HKT
+
+- Branch security/gpt-typescript-pilot, entry07f9dc36e7b92e5166bb7998738f4d99d498dcc3. Test commit c047e45 plus this documentation commit leave renderer bytes unchanged.
+- Owner requests reproducing the resource concern, trusted regression, then new-commit-triggered GPT repair/rescan/retest/comment. Engine temporarily pauses only PDFToolkit-PR-Change-Detector during preparation. Old GPT heartbeat remains PAUSED.
+- Policy:200 pages/batch,512px,4 parallel,16MiB aggregate URL characters, awaited document destruction after all active sibling work and explicit page/canvas cleanup. Larger batches reject, never truncate. Existing UI generic error is preserved; merge/parser/input-memory/complex-page limits remain out of scope.
+- Baseline42cases:17pass/25fail, zero skipped/cancelled. Real generated201-page PDF is2,973bytes but creates201 thumbnails and leaves201 nonzero canvas dimensions; retained canvas references are observer instrumentation, not heap/OOM proof. Raw probe and test evidence: DevOps-Scanner/evidence/pr-resource-20261105.
+- Next: pin this independently reviewed preparation commit in engine policyv3, run committed-source baseline, guarded preparation push after deployment-suppression check, restore detector and await actual scheduled initial GPT review/one renderer repair/prepush test/fast-forward push/final scan+GPT+tests/verified comment. Main preparation chat must not manually supply/apply correction. Never merge/deploy or execute PR-supplied config.
+
+
 ## Unattended repair acceptance queued — 2026-11-01 HKT
 
 - Entry branch security/gpt-typescript-pilot / 2157cc53a2822b9ee80d911c257ad384e8b2a5b7; the commit containing this entry adds only tests and documentation. lib/pdf-renderer.ts is unchanged.
