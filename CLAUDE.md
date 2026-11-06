@@ -10,6 +10,12 @@ Browser-based PDF manipulation — merge, split, rotate, reorder, delete. 100% c
 
 ---
 
+## Renderer security workflow
+
+Current toolkit acceptance: run `node tests/toolkit-lifecycle.cjs`, `node tests/toolkit-edit-errors.cjs` and `node tests/toolkit-selection-boundary.cjs`. Async operations and dropzone parsing use generation refs; the optional selection-start callback invalidates parent work before validation, and mounted-state guards reject late native file callbacks. Reset remounts the dropzone and stays available during parsing. Edits clear superseded errors; current load errors display without pages. Keep earlier `toolkit-composition.cjs` / `toolkit-existing-rotation.cjs` frozen for old snapshots; their extraction host predates generation refs. Browser QA lives in AI Vulnerability Manager `scripts/closure_browser.cjs` and uses synthetic PDFs only.
+
+`lib/pdf-renderer.ts` bundles its PDF.js worker with `new URL(..., import.meta.url)` and schedules page work in bounded batches. Run committed-source regressions through DevOps-Scanner retest-pdf-toolkit; use synthetic PDFs for browser checks. The helper retains all thumbnail results and trusts installed PDF.js; this is not complete document-memory isolation.
+
 ## Key Decisions
 
 ### No Server-Side Processing
@@ -25,7 +31,9 @@ Toolkit supports both clockwise AND counter-clockwise rotation (90° increments)
 All `pdf-lib` calls use 0-based indices. User-facing display (in badges/labels) shows 1-based. Conversion happens at the UI layer only.
 
 ### Rotation + Deletion Index Mapping
-When pages are deleted before rotation is applied, the rotation target index shifts. The toolkit handles this by computing `originalToNewIdx` before applying rotation — deleting first changes the document structure, so rotation targets must map to post-deletion indices.
+The toolkit download handler deletes, then reorders, then rotates. Rotation state uses original page IDs, so map each surviving original ID to its final `order` position, not merely its post-deletion index. Run `node tests/toolkit-composition.cjs` for actual-handler synthetic PDF regression checks. `applyAllOperations` is a separate unused helper and is not the toolkit caller.
+
+Toolkit rotation controls are relative to the already-oriented thumbnail, so the handler passes `"relative"` to `rotatePages`. The helper defaults to absolute rotation for existing callers. Run `node tests/toolkit-existing-rotation.cjs` for source-page rotation preservation; its wrapper changes only synthetic input initialization in the composition harness.
 
 ---
 
@@ -82,6 +90,8 @@ All routes statically prerendered — no serverless compute used.
 ---
 
 ## File Size Limits
+
+Mixed selections list ignored filenames while retaining valid PDF files. Browser MIME recognition remains the admission rule; empty/non-PDF MIME files are named in the notice even when their filename ends in .pdf. Keep notices separate from parse/size errors. Run `node tests/toolkit-mixed-selection.cjs` alongside the three lifecycle harnesses; the original hosts are frozen for historical evidence.
 
 Enforced in `components/pdf/PdfDropzone.tsx`:
 - **Soft limit: 50MB** → console.warn only

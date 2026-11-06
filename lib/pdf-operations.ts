@@ -64,10 +64,12 @@ export async function extractPages(
  * Rotate specific pages.
  * pageIndices: 0-indexed
  * rotation: 0 | 90 | 180 | 270
+ * Relative mode adds the adjustment to the source page's existing rotation.
  */
 export async function rotatePages(
   pdf: Uint8Array,
-  rotations: Map<number, Rotation>
+  rotations: Map<number, Rotation>,
+  mode: "absolute" | "relative" = "absolute"
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.load(pdf);
   const pages = doc.getPages();
@@ -75,7 +77,8 @@ export async function rotatePages(
   pages.forEach((page, idx) => {
     const rot = rotations.get(idx);
     if (rot !== undefined) {
-      page.setRotation(degrees(rot));
+      const angle = mode === "relative" ? ((page.getRotation().angle + rot) % 360 + 360) % 360 : rot;
+      page.setRotation(degrees(angle));
     }
   });
 

@@ -42,7 +42,8 @@ export default function SplitPage() {
     revokeUrl();
     setLoading(true);
     try {
-      const thumbs = await renderAllPages(f.bytes, 160, 4);
+      // PDF.js transfers its input to the worker; retain the source for extraction.
+      const thumbs = await renderAllPages(f.bytes.slice(), 160, 4);
       setPages(thumbs);
     } catch {
       setError("Could not render PDF pages.");

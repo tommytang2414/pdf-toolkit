@@ -5,9 +5,38 @@
 
 import * as pdfjsLib from "pdfjs-dist";
 
-// Worker is loaded from the pdfjs-dist package itself.
-// Vite-friendly: use a CDN worker URL instead of a file path.
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// Bundle the matching installed worker; local PDF bytes never depend on runtime CDN code.
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
+
+const MAX_BATCH_PAGES = 200;
+const MAX_THUMBNAIL_PX = 512;
+const MAX_CONCURRENCY = 4;
+const MAX_BATCH_DATA_URL_CHARS = 16 * 1024 * 1024;
+
+async function loadPdfDocument(pdf: Uint8Array) {
+  const loadingTask = pdfjsLib.getDocument({ data: pdf });
+  try {
+    return await loadingTask.promise;
+  } catch (error) {
+    await loadingTask.destroy();
+    throw error;
+  }
+}
+
+function validateMaxPx(maxPx: number): void {
+  if (!Number.isFinite(maxPx) || maxPx <= 0 || maxPx > MAX_THUMBNAIL_PX) {
+    throw new RangeError(`maxPx must be a finite positive number no greater than ${MAX_THUMBNAIL_PX}`);
+  }
+}
+
+function validateConcurrency(concurrency: number): void {
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > MAX_CONCURRENCY) {
+    throw new RangeError(`concurrency must be a positive integer no greater than ${MAX_CONCURRENCY}`);
+  }
+}
 
 export interface PageRender {
   /** 0-indexed page number */
@@ -20,12 +49,56 @@ export interface PageRender {
   height: number;
 }
 
+type LoadedPdfDocument = Awaited<ReturnType<typeof loadPdfDocument>>;
+
+async function renderDocumentPage(
+  doc: LoadedPdfDocument,
+  pageIndex: number,
+  maxPx: number
+): Promise<PageRender> {
+  const page = await doc.getPage(pageIndex + 1);
+  let canvas: HTMLCanvasElement | null = null;
+
+  try {
+    const viewport = page.getViewport({ scale: 1 });
+    const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
+    const scaledViewport = page.getViewport({ scale });
+
+    canvas = document.createElement("canvas");
+    canvas.width = Math.round(scaledViewport.width);
+    canvas.height = Math.round(scaledViewport.height);
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Could not create a 2D rendering context");
+    }
+    await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+
+    return {
+      pageIndex,
+      dataUrl: canvas.toDataURL("image/jpeg", 0.85),
+      width: viewport.width,
+      height: viewport.height,
+    };
+  } finally {
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+    page.cleanup();
+  }
+}
+
 /**
  * Get the number of pages in a PDF without rendering anything.
  */
 export async function getPageCount(pdf: Uint8Array): Promise<number> {
-  const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
-  return doc.numPages;
+  const doc = await loadPdfDocument(pdf);
+  try {
+    return doc.numPages;
+  } finally {
+    await doc.destroy();
+  }
 }
 
 /**
@@ -37,26 +110,13 @@ export async function renderPage(
   pageIndex: number,
   maxPx = 200
 ): Promise<PageRender> {
-  const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
-  const page = await doc.getPage(pageIndex + 1); // pdfjs is 1-indexed
-
-  const viewport = page.getViewport({ scale: 1 });
-  const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
-  const scaledViewport = page.getViewport({ scale });
-
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(scaledViewport.width);
-  canvas.height = Math.round(scaledViewport.height);
-
-  const ctx = canvas.getContext("2d")!;
-  await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
-
-  return {
-    pageIndex,
-    dataUrl: canvas.toDataURL("image/jpeg", 0.85),
-    width: viewport.width,
-    height: viewport.height,
-  };
+  validateMaxPx(maxPx);
+  const doc = await loadPdfDocument(pdf);
+  try {
+    return await renderDocumentPage(doc, pageIndex, maxPx);
+  } finally {
+    await doc.destroy();
+  }
 }
 
 /**
@@ -68,42 +128,60 @@ export async function renderAllPages(
   maxPx = 200,
   concurrency = 4
 ): Promise<PageRender[]> {
-  const doc = await pdfjsLib.getDocument({ data: pdf }).promise;
-  const numPages = doc.numPages;
+  validateMaxPx(maxPx);
+  validateConcurrency(concurrency);
 
-  const tasks: Promise<PageRender>[] = [];
-  for (let i = 0; i < numPages; i++) {
-    const task = doc.getPage(i + 1).then(async (page) => {
-      const viewport = page.getViewport({ scale: 1 });
-      const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
-      const scaledViewport = page.getViewport({ scale });
+  const doc = await loadPdfDocument(pdf);
+  try {
+    const numPages = doc.numPages;
+    if (numPages > MAX_BATCH_PAGES) {
+      throw new RangeError(`PDF has more than ${MAX_BATCH_PAGES} pages`);
+    }
 
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(scaledViewport.width);
-      canvas.height = Math.round(scaledViewport.height);
+    const results: PageRender[] = [];
+    let encodedChars = 0;
 
-      const ctx = canvas.getContext("2d")!;
-      await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+    for (let start = 0; start < numPages; start += concurrency) {
+      const tasks = Array.from(
+        { length: Math.min(concurrency, numPages - start) },
+        (_, offset) => renderDocumentPage(doc, start + offset, maxPx)
+      );
+      const settled = await Promise.allSettled(tasks);
+      const batchResults: PageRender[] = [];
+      let batchFailed = false;
+      let batchError: unknown;
 
-      return {
-        pageIndex: i,
-        dataUrl: canvas.toDataURL("image/jpeg", 0.85),
-        width: viewport.width,
-        height: viewport.height,
-      };
-    });
-    tasks.push(task);
+      for (const result of settled) {
+        if (result.status === "rejected") {
+          if (!batchFailed) {
+            batchFailed = true;
+            batchError = result.reason ?? new Error("PDF page rendering failed");
+          }
+          continue;
+        }
+
+        encodedChars += result.value.dataUrl.length;
+        if (encodedChars > MAX_BATCH_DATA_URL_CHARS) {
+          if (!batchFailed) {
+            batchFailed = true;
+            batchError = new RangeError(
+              `Rendered thumbnails exceed the ${MAX_BATCH_DATA_URL_CHARS} character batch limit`
+            );
+          }
+          continue;
+        }
+
+        batchResults.push(result.value);
+      }
+
+      if (batchFailed) {
+        throw batchError;
+      }
+      results.push(...batchResults);
+    }
+
+    return results;
+  } finally {
+    await doc.destroy();
   }
-
-  // Process in batches to avoid overwhelming the browser
-  const results: PageRender[] = new Array(numPages);
-  for (let i = 0; i < numPages; i += concurrency) {
-    const batch = tasks.slice(i, i + concurrency);
-    const settled = await Promise.all(batch);
-    settled.forEach((page) => {
-      results[page.pageIndex] = page;
-    });
-  }
-
-  return results;
 }

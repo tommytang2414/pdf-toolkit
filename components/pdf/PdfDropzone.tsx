@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 
 interface PdfFile {
@@ -12,20 +12,33 @@ interface PdfFile {
 
 interface Props {
   onFiles(files: PdfFile[]): void;
+  onSelectionStart?(): void;
   multiple?: boolean;
 }
 
 const SOFT_LIMIT = 50 * 1024 * 1024; // 50 MB — warn only
 const HARD_LIMIT = 100 * 1024 * 1024; // 100 MB — block
 
-export default function PdfDropzone({ onFiles, multiple = true }: Props) {
+export default function PdfDropzone({ onFiles, onSelectionStart, multiple = true }: Props) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ignoredFiles, setIgnoredFiles] = useState<string[]>([]);
+  const selectionId = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; selectionId.current++; };
+  }, []);
 
   const processFiles = useCallback(
     async (raw: FileList | File[]) => {
+      if (!mounted.current) return;
+      const selection = ++selectionId.current;
+      onSelectionStart?.();
       setError(null);
-      const files = Array.from(raw).filter((f) => f.type === "application/pdf");
+      const selected = Array.from(raw);
+      const files = selected.filter((f) => f.type === "application/pdf");
+      setIgnoredFiles(selected.filter((f) => f.type !== "application/pdf").map((f) => f.name));
 
       if (files.length === 0) {
         setError("Please drop PDF files only.");
@@ -49,16 +62,21 @@ export default function PdfDropzone({ onFiles, multiple = true }: Props) {
       }
 
       const results: PdfFile[] = [];
-      for (const file of files) {
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const { PDFDocument } = await import("pdf-lib");
-        const doc = await PDFDocument.load(bytes);
-        results.push({ file, bytes, name: file.name, pageCount: doc.getPageCount() });
+      try {
+        for (const file of files) {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          if (selection !== selectionId.current) return;
+          const { PDFDocument } = await import("pdf-lib");
+          const doc = await PDFDocument.load(bytes);
+          if (selection !== selectionId.current) return;
+          results.push({ file, bytes, name: file.name, pageCount: doc.getPageCount() });
+        }
+        if (selection === selectionId.current) onFiles(results);
+      } catch {
+        if (selection === selectionId.current) setError("Failed to read PDF files. Please choose valid PDFs.");
       }
-
-      onFiles(results);
     },
-    [multiple, onFiles]
+    [multiple, onFiles, onSelectionStart]
   );
 
   return (
@@ -104,6 +122,14 @@ export default function PdfDropzone({ onFiles, multiple = true }: Props) {
       <p style={{ margin: 0, fontSize: 13, color: "#52525b" }}>
         {multiple ? "Multiple files supported" : "Single file only"} · Max 100 MB
       </p>
+      {ignoredFiles.length > 0 && (
+        <div role="status" aria-live="polite" style={{ maxWidth: "100%", fontSize: 13, color: "var(--accent-light)", overflowWrap: "anywhere" }}>
+          <p style={{ margin: 0 }}>Ignored files (not recognised as PDF):</p>
+          <ul style={{ margin: "6px 0 0", paddingLeft: 20 }}>
+            {ignoredFiles.map((name, index) => <li key={index}>{name}</li>)}
+          </ul>
+        </div>
+      )}
       {error && (
         <p style={{ margin: 0, fontSize: 13, color: "#f87171", textAlign: "center" }}>
           {error}
