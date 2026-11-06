@@ -9,6 +9,13 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-07 — Cancel obsolete Toolkit rendering
+
+- Toolkit now aborts its active thumbnail job on Reset, selection start, replacement and unmount. Replacement waits for the prior renderer's cleanup before creating another worker; generation checks still suppress obsolete publication.
+- `renderAllPages` accepts an optional AbortSignal, cancels actual RenderTasks, aborts loading/getPage waits and awaits a memoized loading-task destroy. Cleanup failures remain errors; cancellation does not weaken the existing resource limits. Other callers may omit the signal.
+- Run `node --experimental-vm-modules tests/toolkit-render-cancellation.cjs` (16 actual-source/controlled-task checks). Run frozen suites through `node tests/toolkit-cancellable-host.cjs lifecycle|errors|boundary|mixed`: the adapter updates only their deferred mock's cancellation contract; it is not real worker evidence. Original harness bytes and the 42 renderer security checks remain unchanged.
+- Local production-build browser evidence separately verifies real worker termination, at most one worker during replacement, current download bytes and zero retained render canvases after Reset/unmount. Central evidence: `workspaces/pdf-cancellation-20261107`. Owner authorized one extra correction/review on the original change; no production deployment or merge.
+
 ### 2026-11-07 — Disclose ignored selections and refresh two build dependencies
 
 - Mixed selections continue processing valid PDF MIME files and list every ignored filename in an accessible status notice. Filenames are plain React text with wrapping for mobile; the notice clears on the next selection or Reset. Existing MIME, size, parser and cancellation rules remain in force.

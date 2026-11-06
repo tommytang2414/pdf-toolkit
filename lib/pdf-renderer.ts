@@ -51,15 +51,30 @@ export interface PageRender {
 
 type LoadedPdfDocument = Awaited<ReturnType<typeof loadPdfDocument>>;
 
+interface RenderCancellation {
+  signal: AbortSignal;
+  aborted: Promise<never>;
+  tasks: Set<pdfjsLib.RenderTask>;
+}
+
+function throwIfCancelled(signal?: AbortSignal): void {
+  if (signal?.aborted) throw new DOMException("PDF rendering cancelled", "AbortError");
+}
+
 async function renderDocumentPage(
   doc: LoadedPdfDocument,
   pageIndex: number,
-  maxPx: number
+  maxPx: number,
+  cancellation?: RenderCancellation
 ): Promise<PageRender> {
-  const page = await doc.getPage(pageIndex + 1);
+  throwIfCancelled(cancellation?.signal);
+  const pageRequest = doc.getPage(pageIndex + 1);
+  const page = await (cancellation ? Promise.race([pageRequest, cancellation.aborted]) : pageRequest);
   let canvas: HTMLCanvasElement | null = null;
+  let renderTask: pdfjsLib.RenderTask | undefined;
 
   try {
+    throwIfCancelled(cancellation?.signal);
     const viewport = page.getViewport({ scale: 1 });
     const scale = Math.min(maxPx / viewport.width, maxPx / viewport.height, 1);
     const scaledViewport = page.getViewport({ scale });
@@ -72,7 +87,11 @@ async function renderDocumentPage(
     if (!ctx) {
       throw new Error("Could not create a 2D rendering context");
     }
-    await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+    renderTask = page.render({ canvasContext: ctx, viewport: scaledViewport });
+    cancellation?.tasks.add(renderTask);
+    if (cancellation?.signal.aborted) renderTask.cancel();
+    await renderTask.promise;
+    throwIfCancelled(cancellation?.signal);
 
     return {
       pageIndex,
@@ -81,6 +100,7 @@ async function renderDocumentPage(
       height: viewport.height,
     };
   } finally {
+    if (renderTask) cancellation?.tasks.delete(renderTask);
     if (canvas) {
       canvas.width = 0;
       canvas.height = 0;
@@ -126,13 +146,31 @@ export async function renderPage(
 export async function renderAllPages(
   pdf: Uint8Array,
   maxPx = 200,
-  concurrency = 4
+  concurrency = 4,
+  signal?: AbortSignal
 ): Promise<PageRender[]> {
   validateMaxPx(maxPx);
   validateConcurrency(concurrency);
+  throwIfCancelled(signal);
 
-  const doc = await loadPdfDocument(pdf);
+  const loadingTask = pdfjsLib.getDocument({ data: pdf });
+  let destruction: Promise<void> | undefined;
+  const destroy = () => destruction ??= loadingTask.destroy();
+  const tasks = new Set<pdfjsLib.RenderTask>();
+  let rejectAbort: (reason: DOMException) => void = () => {};
+  const aborted = new Promise<never>((_, reject) => { rejectAbort = reject; });
+  const cancellation = signal ? { signal, aborted, tasks } : undefined;
+  const abort = () => {
+    tasks.forEach(task => task.cancel());
+    rejectAbort(new DOMException("PDF rendering cancelled", "AbortError"));
+    // Observe rejection immediately; finally awaits this same cleanup promise.
+    void destroy().catch(() => {});
+  };
+  signal?.addEventListener("abort", abort, { once: true });
   try {
+    // PDF.js loading/getPage promises need not settle promptly after worker destruction.
+    const doc = await Promise.race([loadingTask.promise, aborted]);
+    throwIfCancelled(signal);
     const numPages = doc.numPages;
     if (numPages > MAX_BATCH_PAGES) {
       throw new RangeError(`PDF has more than ${MAX_BATCH_PAGES} pages`);
@@ -142,11 +180,13 @@ export async function renderAllPages(
     let encodedChars = 0;
 
     for (let start = 0; start < numPages; start += concurrency) {
-      const tasks = Array.from(
+      throwIfCancelled(signal);
+      const batch = Array.from(
         { length: Math.min(concurrency, numPages - start) },
-        (_, offset) => renderDocumentPage(doc, start + offset, maxPx)
+        (_, offset) => renderDocumentPage(doc, start + offset, maxPx, cancellation)
       );
-      const settled = await Promise.allSettled(tasks);
+      const settled = await Promise.allSettled(batch);
+      throwIfCancelled(signal);
       const batchResults: PageRender[] = [];
       let batchFailed = false;
       let batchError: unknown;
@@ -182,6 +222,9 @@ export async function renderAllPages(
 
     return results;
   } finally {
-    await doc.destroy();
+    signal?.removeEventListener("abort", abort);
+    await destroy();
+    // Normalize PDF.js cancellation errors only after successful resource cleanup.
+    throwIfCancelled(signal);
   }
 }

@@ -91,7 +91,7 @@ All routes statically prerendered — no serverless compute used.
 
 ## File Size Limits
 
-Mixed selections list ignored filenames while retaining valid PDF files. Browser MIME recognition remains the admission rule; empty/non-PDF MIME files are named in the notice even when their filename ends in .pdf. Keep notices separate from parse/size errors. Run `node tests/toolkit-mixed-selection.cjs` alongside the three lifecycle harnesses; the original hosts are frozen for historical evidence.
+Mixed selections list ignored filenames while retaining valid PDF files. Browser MIME recognition remains the admission rule; empty/non-PDF MIME files are named in the notice even when their filename ends in .pdf. Keep notices separate from parse/size errors. Original lifecycle hosts are frozen for historical evidence; run their four suites through `node tests/toolkit-cancellable-host.cjs lifecycle|errors|boundary|mixed` so deferred render mocks honor the new AbortSignal contract. Real cancellation has a separate `node --experimental-vm-modules tests/toolkit-render-cancellation.cjs` harness and central browser evidence. Toolkit aborts on Reset/selection/replacement/unmount and awaits previous cleanup before new rendering; `renderAllPages` owns task cancellation and one awaited destruction. Do not treat generation guards alone as resource cancellation.
 
 Enforced in `components/pdf/PdfDropzone.tsx`:
 - **Soft limit: 50MB** → console.warn only

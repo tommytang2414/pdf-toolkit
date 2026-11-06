@@ -129,14 +129,18 @@ export default function ToolkitPage() {
   const [dropzoneKey, setDropzoneKey] = useState(0);
   const { create: createUrl, revoke: revokeUrl } = useBlobUrl();
   const operationId = useRef(0);
+  const renderJob = useRef<{ controller: AbortController; done: Promise<PageThumb[]> } | null>(null);
+  const cancelRendering = useCallback(() => { renderJob.current?.controller.abort(); }, []);
 
   useEffect(() => () => {
     operationId.current++;
+    cancelRendering();
     revokeUrl();
-  }, [revokeUrl]);
+  }, [revokeUrl, cancelRendering]);
 
   const invalidateResult = () => {
     operationId.current++;
+    cancelRendering();
     setResultUrl(null);
     setError(null);
     revokeUrl();
@@ -150,25 +154,41 @@ export default function ToolkitPage() {
 
   const reset = useCallback(() => {
     operationId.current++;
+    cancelRendering();
     setDropzoneKey((key) => key + 1);
     setFiles([]); setPages([]); setOrder([]); setRotations(new Map());
     setResultUrl(null); setError(null); setMergedBytes(null);
     revokeUrl();
     setLoading(false);
-  }, [revokeUrl]);
+  }, [revokeUrl, cancelRendering]);
 
   const handleFiles = useCallback(async (newFiles: PdfFile[]) => {
     const generation = ++operationId.current;
+    const previous = renderJob.current;
+    cancelRendering();
     setFiles(newFiles); setPages([]); setOrder([]); setRotations(new Map());
     setResultUrl(null); setError(null); setMergedBytes(null); revokeUrl();
     setLoading(true);
     try {
+      // A replacement cannot allocate a new worker until the obsolete job finishes cleanup.
+      if (previous) {
+        try { await previous.done; }
+        catch (error) {
+          if (!(error instanceof DOMException && error.name === "AbortError")) throw error;
+        }
+      }
+      if (generation !== operationId.current) return;
       const { mergePdfs } = await import("@/lib/pdf-operations");
       const merged = await mergePdfs(newFiles.map((f) => f.bytes));
       if (generation !== operationId.current) return;
       setMergedBytes(merged);
       // Keep editable bytes after PDF.js transfers its thumbnail input to the worker.
-      const thumbs = await renderAllPages(merged.slice(), 160, 4);
+      const controller = new AbortController();
+      const job = { controller, done: renderAllPages(merged.slice(), 160, 4, controller.signal) };
+      renderJob.current = job;
+      let thumbs: PageThumb[];
+      try { thumbs = await job.done; }
+      finally { if (renderJob.current === job) renderJob.current = null; }
       if (generation !== operationId.current) return;
       setPages(thumbs);
       setOrder(thumbs.map((t) => t.pageIndex));
@@ -177,15 +197,16 @@ export default function ToolkitPage() {
     } finally {
       if (generation === operationId.current) setLoading(false);
     }
-  }, [revokeUrl]);
+  }, [revokeUrl, cancelRendering]);
 
   const handleSelectionStart = useCallback(() => {
     operationId.current++;
+    cancelRendering();
     setFiles([]); setPages([]); setOrder([]); setRotations(new Map());
     setResultUrl(null); setError(null); setMergedBytes(null);
     revokeUrl();
     setLoading(false);
-  }, [revokeUrl]);
+  }, [revokeUrl, cancelRendering]);
 
   const handleRotateCW = (pageIndex: number) => {
     invalidateResult();
