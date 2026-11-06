@@ -91,6 +91,8 @@ All routes statically prerendered — no serverless compute used.
 
 ## File Size Limits
 
+Mixed selections list ignored filenames while retaining valid PDF files. Browser MIME recognition remains the admission rule; empty/non-PDF MIME files are named in the notice even when their filename ends in .pdf. Keep notices separate from parse/size errors. Run `node tests/toolkit-mixed-selection.cjs` alongside the three lifecycle harnesses; the original hosts are frozen for historical evidence.
+
 Enforced in `components/pdf/PdfDropzone.tsx`:
 - **Soft limit: 50MB** → console.warn only
 - **Hard limit: 100MB** → upload rejected with error message

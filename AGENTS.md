@@ -9,6 +9,12 @@ Read CLAUDE.md and AI_HANDOFF.md. Follow C:/Users/User/AGENTS.md.
 
 ## Changelog
 
+### 2026-11-07 — Disclose ignored selections and refresh two build dependencies
+
+- Mixed selections continue processing valid PDF MIME files and list every ignored filename in an accessible status notice. Filenames are plain React text with wrapping for mobile; the notice clears on the next selection or Reset. Existing MIME, size, parser and cancellation rules remain in force.
+- `node tests/toolkit-mixed-selection.cjs` uses actual Dropzone and pdf-lib with the frozen lifecycle host: baseline 2/6, fixed 6/6. Keep the existing three lifecycle harnesses unchanged. Local browser checks cover chooser/drop, accepted download bytes, notice reset, long names and bundled worker identity.
+- Targeted lock-only dependency changes: baseline-browser-mapping 2.10.33 to 2.11.35 and source-map-js 1.2.1 to 1.2.2; package.json unchanged. Fresh selected installed-graph OSV lookup covers 29 components, two matches before and zero after. These were build-tool matches, not demonstrated PDF-upload exploits. No production deployment or main merge.
+
 ### 2026-11-06 — Invalidate parent work at selection start
 
 - Dropzone notifies Toolkit synchronously before validation or parsing so even a rejected replacement invalidates earlier parent work. Other Dropzone callers can omit the callback. Unmounted native file-input callbacks are ignored; effect setup remains StrictMode-safe.

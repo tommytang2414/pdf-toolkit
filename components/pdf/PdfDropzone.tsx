@@ -22,6 +22,7 @@ const HARD_LIMIT = 100 * 1024 * 1024; // 100 MB — block
 export default function PdfDropzone({ onFiles, onSelectionStart, multiple = true }: Props) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [ignoredFiles, setIgnoredFiles] = useState<string[]>([]);
   const selectionId = useRef(0);
   const mounted = useRef(true);
   useEffect(() => {
@@ -35,7 +36,9 @@ export default function PdfDropzone({ onFiles, onSelectionStart, multiple = true
       const selection = ++selectionId.current;
       onSelectionStart?.();
       setError(null);
-      const files = Array.from(raw).filter((f) => f.type === "application/pdf");
+      const selected = Array.from(raw);
+      const files = selected.filter((f) => f.type === "application/pdf");
+      setIgnoredFiles(selected.filter((f) => f.type !== "application/pdf").map((f) => f.name));
 
       if (files.length === 0) {
         setError("Please drop PDF files only.");
@@ -119,6 +122,14 @@ export default function PdfDropzone({ onFiles, onSelectionStart, multiple = true
       <p style={{ margin: 0, fontSize: 13, color: "#52525b" }}>
         {multiple ? "Multiple files supported" : "Single file only"} · Max 100 MB
       </p>
+      {ignoredFiles.length > 0 && (
+        <div role="status" aria-live="polite" style={{ maxWidth: "100%", fontSize: 13, color: "var(--accent-light)", overflowWrap: "anywhere" }}>
+          <p style={{ margin: 0 }}>Ignored files (not recognised as PDF):</p>
+          <ul style={{ margin: "6px 0 0", paddingLeft: 20 }}>
+            {ignoredFiles.map((name, index) => <li key={index}>{name}</li>)}
+          </ul>
+        </div>
+      )}
       {error && (
         <p style={{ margin: 0, fontSize: 13, color: "#f87171", textAlign: "center" }}>
           {error}

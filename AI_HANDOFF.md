@@ -1,5 +1,12 @@
 # AI Handoff
 
+## Mixed selection and dependency evidence — 2026-11-07 HKT
+
+- Entry `fe7aed1`, clean `security/gpt-typescript-pilot`. User selected visible ignored-file names plus continued valid PDF processing and requested dependency/runtime evidence; production explicitly excluded. This delivery commit contains the source fix and test; final central review/report follows.
+- Dropzone now lists ignored filenames via React text/accessible status, wrapping long names. Notice clears on next selection/Reset; errors and generation guards remain. New actual-parser regression 2/6 before, 6/6 after; existing 13+4+12 checks pass. Fresh webpack production build and eight local browser checks pass, desktop/mobile screenshots inspected. Two preliminary browser harness failures were broad-status-selector mistakes involving dnd-kit status regions; bounded notice selector fixes the harness, not application code. Original diagnostics retained centrally.
+- Only two resolved lock entries updated: baseline-browser-mapping 2.10.33→2.11.35 and source-map-js 1.2.1→1.2.2. Fresh installed graph: 29 complete OSV queries, two before and zero after. This is selected local dependency evidence, not whole-app or production clearance. Package.json, renderer and auth unchanged.
+- Durable evidence `C:/Users/User/ai-vulnerability-manager/workspaces/pdf-unblock-20261107/`. Next: central unified CLI attaches bound dependency/worker/runtime evidence and reviews this committed correction under the original PDF change ID and unchanged budget. Do not deploy, merge or infer a final gate from the passing tests. Git deployment remains disabled.
+
 ## Autonomous lifecycle closure — 2026-11-06 HKT
 
 - Entry `b18d55b`, clean `security/gpt-typescript-pilot`; owner authorized autonomous evidence-led completion. Actual callback regressions reproduce stale load/download/reset/edit/unmount completions and cross-component selection races; generation guards and Reset remount fix them (5/13 to13/13).
